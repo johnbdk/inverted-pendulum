@@ -9,8 +9,6 @@ def train(model, train_dataloader, validation_dataloader, loss_fcn, optimizer, e
         v_loss = 0 
         for batch_features,_ in train_dataloader:
 
-            batch_features = batch_features.view(-1, 784) # comment out for convolutional
-
             optimizer.zero_grad()
             
             outputs = model(batch_features)

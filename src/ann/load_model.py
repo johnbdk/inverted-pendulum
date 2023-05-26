@@ -1,13 +1,15 @@
 import torch
 from torch import nn
 from models import Network_NARX
-
+from dataset import DiskDataset 
 # choose model
 MODEL_PATH = 'Network_NARX.pth'
 MODEL_PATH = 'Network_NOE.pth'
 MODEL_PATH = 'Network_states.pth'
 
 # data loaders
+DiskDataset('../data/training-data.csv')
+
 
 # loss fcn
 
