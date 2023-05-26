@@ -13,19 +13,19 @@ class DiskDataset(Dataset):
         return len(self.data)
     
     def __getitem__(self, index):
-        u = torch.tensor(self.data.iloc[index, 0])
-        th = torch.tensor(self.data.iloc[index, 1])
+        u = torch.tensor(self.data.iloc[index, 0]).double()
+        th = torch.tensor(self.data.iloc[index, 1]).double()
 
         if self.transform:
             item = self.transform(item)
 
         return [u, th]
 
-dataset_train = DiskDataset(file = "../data/training-data.csv")
-u_list_train = []
-th_list_train = []
-for i in range(len(dataset_train)):
-    u, th = dataset_train[i]
-    u_list_train.append(u.item())  # Convert tensor to a scalar value
-    th_list_train.append(th.item())  # Convert tensor to a scalar value
+# dataset_train = DiskDataset(file = "../data/training-data.csv")
+# u_list_train = []
+# th_list_train = []
+# for i in range(len(dataset_train)):
+#     u, th = dataset_train[i]
+#     u_list_train.append(u.item())  # Convert tensor to a scalar value
+#     th_list_train.append(th.item())  # Convert tensor to a scalar value
 

@@ -7,13 +7,13 @@ def train(model, train_dataloader, validation_dataloader, loss_fcn, optimizer, e
     for epoch in range(epochs):
         loss = 0
         v_loss = 0 
-        for batch_features,_ in train_dataloader:
-
+        for batch,_ in train_dataloader:
+            
             optimizer.zero_grad()
+            batch=batch.type(torch.DoubleTensor)
+            outputs = model(batch)
             
-            outputs = model(batch_features)
-            
-            train_loss = loss_fcn(outputs, batch_features)
+            train_loss = loss_fcn(outputs, batch)
 
             train_loss.backward()
 
@@ -22,7 +22,6 @@ def train(model, train_dataloader, validation_dataloader, loss_fcn, optimizer, e
             loss += train_loss.item()
             
         for features,_ in validation_dataloader:
-                features = features.view(-1, 784)
                 v_outputs = model(features)
                 v_loss = loss_fcn(v_outputs, features)
                 v_loss = v_loss.item()

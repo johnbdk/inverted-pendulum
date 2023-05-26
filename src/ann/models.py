@@ -26,14 +26,17 @@ class Network_NOE(nn.Module):
         return output
 
 class RNN(nn.Module): 
-    def __init__(self, hidden_size): 
+    def __init__(self): 
         # invoke nn.Module constructor
         super(RNN,self).__init__() 
-        self.input_size = 1 
-        self.output_size = 1
-        self.hidden_size = hidden_size
+        self.layer1 = nn.Linear(1, 10, True)
+        self.layer2 = nn.Linear(10, 1, True)
 
     
     def forward(self, inputs):
-       
-        return inputs
+
+        output = self.layer1(inputs)
+        output = torch.relu(output)
+        output = self.layer2(output)
+        output = torch.relu(output)
+        return output
