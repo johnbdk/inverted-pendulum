@@ -1,9 +1,11 @@
 import torch
-from torch.utils.data import random_split
+from torch.utils.data import random_split, DataLoader
 from models import RNN
 from training import train
 from dataset import DiskDataset
 import torch.optim as optim
+
+BATCH_SIZE = 64
 
 # Load dataset
 dataset = DiskDataset(file = "../data/training-data.csv")
@@ -14,8 +16,11 @@ test_size = dataset_size - train_size
 # Split the dataset
 train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
-model = RNN(hidden_size=15) 
+train_dataloader = DataLoader(train_dataset, BATCH_SIZE)
+test_dataloader = DataLoader(test_dataset, BATCH_SIZE)
+
+model = RNN(hidden_size=32) 
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 loss_fcn = torch.nn.MSELoss()
-train(model, train_dataset,test_dataset,loss_fcn, optimizer, epochs=10)
+train(model, train_dataloader,test_dataloader,loss_fcn, optimizer, epochs=10)
 torch.save(model.state_dict(), 'Network_states.pth')
