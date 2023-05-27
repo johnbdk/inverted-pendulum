@@ -1,5 +1,36 @@
 import numpy as np
-import torch
+import matplotlib.pyplot as plt
+
+def train_NARX(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs):
+
+    epoch_loss = []
+
+    for epoch in range(epochs): 
+        t_loss = 0
+        for u, th in train_dataloader:
+            outputs = model(u)
+            train_Loss = loss_fcn(outputs, th)
+            # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
+            optimizer.zero_grad() 
+            train_Loss.backward() 
+            optimizer.step()  
+            t_loss = t_loss + train_Loss.item()
+
+        print(epoch,t_loss)
+        epoch_loss.append(t_loss)
+
+        # TO-DO validation
+
+    test_loss = []
+
+    for u, th in test_dataloader:
+        outputs = model(u)
+        test_loss.append(loss_fcn(outputs, th).item())
+
+    plt.plot(epoch_loss)
+    plt.show()
+
+        
 
 def train(model, train_dataloader, validation_dataloader, loss_fcn, optimizer, epochs):
     loss_data = []
@@ -10,7 +41,7 @@ def train(model, train_dataloader, validation_dataloader, loss_fcn, optimizer, e
         for batch,_ in train_dataloader:
             
             optimizer.zero_grad()
-            batch=batch.type(torch.DoubleTensor)
+
             outputs = model(batch)
             
             train_loss = loss_fcn(outputs, batch)

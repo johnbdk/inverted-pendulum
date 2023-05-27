@@ -1,50 +1,30 @@
 import torch
-from torch.utils.data import random_split, DataLoader
-from models import RNN
-from training import train
-from dataset import DiskDataset
-import torch.optim as optim
-import numpy as np
+from torch.utils.data import DataLoader
+from models import Network_NARX
+from training import train_NARX
+from dataset import DiskDataset, split
 
-def make_OE_data(udata, ydata, nf=100):
-    U = [] 
-    Y = [] 
-    for k in range(nf, len(udata) + 1):
-        U.append(udata[k - nf:k])
-        Y.append(ydata[k - nf:k])
-    return np.array(U), np.array(Y)
-
-BATCH_SIZE = 1
+BATCH_SIZE = 1000
+# series length
+na = 2
+nb = 2
 
 # Load dataset
-dataset = DiskDataset(file="../data/training-data.csv")
-dataset_size = len(dataset)
-train_size = int(0.5 * dataset_size)  # 50% for training
-test_size = dataset_size - train_size
+dataset = DiskDataset(file = "data/training-data.csv", na=na, nb=nb)
 
-# Split the dataset
-train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+train_dataset, test_dataset = split(dataset, 0.9)
 
-train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
-test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+train_dataloader = DataLoader(dataset, BATCH_SIZE)
+test_dataloader = DataLoader(test_dataset, BATCH_SIZE)
 
-model = RNN()
-model.double()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fcn = torch.nn.MSELoss()
+n_hidden_nodes = 32 
+epochs = 10
 
-nfuture = 30
-convert = lambda x: [torch.tensor(xi, dtype=torch.float64) for xi in x]
+model = Network_NARX(na+nb, n_hidden_nodes) 
+print(model)
+optimizer = torch.optim.Adam(model.parameters()) 
+loss = torch.nn.MSELoss()
+ 
+train_NARX(model, train_dataloader, test_dataloader, loss, optimizer, epochs)
 
-dataset_train = DiskDataset(file="../data/training-data.csv")
-train_dataset, test_dataset = random_split(dataset_train, [train_size, test_size])
-
-utrain, ytrain = dataset.get_data()
-
-utest, ytest = dataset.get_data()
-
-Utrain, Ytrain = convert(make_OE_data(utrain, ytrain, nf=nfuture))
-Utest, Ytest = convert(make_OE_data(utest, ytest, nf=nfuture))
-
-
-torch.save(model.state_dict(), 'Network_states.pth')
+# torch.save(model.state_dict(), 'Network_states.pth')
