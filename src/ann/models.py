@@ -25,18 +25,12 @@ class Network_NOE(nn.Module):
         output = input
         return output
 
-class RNN(nn.Module): 
-    def __init__(self): 
-        # invoke nn.Module constructor
-        super(RNN,self).__init__() 
-        self.layer1 = nn.Linear(1, 10, True)
-        self.layer2 = nn.Linear(10, 1, True)
+class RNN(nn.Module):
+    def __init__(self):
+        super(RNN, self).__init__()
+        # Initialize your RNN model here
+        self.rnn = RNN()
 
-    
-    def forward(self, inputs):
-
-        output = self.layer1(inputs)
-        output = torch.relu(output)
-        output = self.layer2(output)
-        output = torch.relu(output)
-        return output
+    def forward(self, x):
+        # Forward pass of your RNN model
+        return self.rnn(x)
