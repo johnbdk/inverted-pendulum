@@ -49,3 +49,14 @@ class LSTMNet(nn.Module):
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])  # Use the last time step's output
         return out    
+class EncoderRNN(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super(EncoderRNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.embedding = nn.Embedding(input_size, hidden_size)
+        self.rnn = nn.GRU(hidden_size, hidden_size)
+
+    def forward(self, input_seq):
+        embedded = self.embedding(input_seq)
+        output, hidden = self.rnn(embedded)
+        return output, hidden
