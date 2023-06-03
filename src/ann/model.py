@@ -33,11 +33,11 @@ def train_ann():
     dataset = DiskDataset(file = dataset_name, na=NA, nb=NB)
 
     train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(dataset, BATCH_SIZE)
+    train_dataloader = DataLoader(train_dataset, BATCH_SIZE)
     test_dataloader = DataLoader(test_dataset, BATCH_SIZE)
 
     n_hidden_nodes = 32 
-    epochs = 10
+    epochs = 15
 
     model = NARXNet(NA+NB, n_hidden_nodes) 
     print(model)
@@ -45,10 +45,11 @@ def train_ann():
     loss = torch.nn.MSELoss()
     
     train(model, train_dataloader, test_dataloader, loss, optimizer, epochs)
-    # torch.save(model.state_dict(), 'Network_states.pth')
+    torch.save(model.state_dict(), 'Network_NARX.pth')
 
 def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs):
-    epoch_loss = []
+    epoch_train_loss = []
+    epoch_val_loss = []
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
@@ -59,18 +60,27 @@ def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs)
             train_Loss.backward() 
             optimizer.step()  
             t_loss = t_loss + train_Loss.item()
+        t_loss = t_loss/len(train_dataloader)
+        val_loss = 0
+        for u, th in test_dataloader:
+            outputs = model(u)
+            val_Loss = loss_fcn(outputs, th)
+            val_loss = val_loss + val_Loss.item()
+        val_loss = val_loss/len(test_dataloader)
+        
+        print("Epoch: %d, Training Loss: %f, Validation Loss: %f" % (epoch+1, t_loss, val_loss))
+        epoch_train_loss.append(t_loss)
+        epoch_val_loss.append(val_Loss)
 
-        print(epoch,t_loss)
-        epoch_loss.append(t_loss)
+    # test_loss = []
+    # for u, th in test_dataloader:
+    #     outputs = model(u)
+    #     test_loss.append(loss_fcn(outputs, th).item())
 
-        # TO-DO validation
-    test_loss = []
-    for u, th in test_dataloader:
-        outputs = model(u)
-        test_loss.append(loss_fcn(outputs, th).item())
+    # plt.plot(epoch_val_loss)
+    # plt.plot(epoch_train_loss)
+    # plt.show()
 
-    plt.plot(epoch_loss)
-    plt.show()
 
 def eval_ann(fname, model_arch):
     file = os.path.join(MODELS_DIR, fname)

@@ -2,7 +2,8 @@
 import torch
 import numpy as np
 import pandas as pd
-from torch.utils.data import random_split, Dataset
+from torch.utils.data import Subset, Dataset
+from sklearn.model_selection import train_test_split
 
 class DiskDataset(Dataset):
     def __init__(self, file, na, nb, transform = None):
@@ -32,7 +33,7 @@ class DiskDataset(Dataset):
 
         return [u, th]
 
-# dataset = DiskDataset(PATH,2,3)
+# dataset = DiskDataset('data/training-data.csv',2,0)
 # len = dataset.__len__()
 # print(len)
 # print(dataset.__getitem__(0))
@@ -41,6 +42,10 @@ class DiskDataset(Dataset):
 def split(dataset, percent):
     dataset_size = len(dataset)
     train_size = int(percent * dataset_size)  # 90% for training
-    test_size = dataset_size - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    print(train_size)
+    test_size = dataset_size - train_size 
+    train_dataset = Subset(dataset, range(train_size))
+    test_dataset = Subset(dataset, range(train_size, train_size + test_size))
+
+    # train_dataset, test_dataset = train_test_split(dataset, test_size, train_size, shuffle=False)
     return train_dataset, test_dataset

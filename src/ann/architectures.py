@@ -5,8 +5,8 @@ from torch import nn
 class NARXNet(nn.Module): 
     def __init__(self, n_in, n_hidden_nodes): 
         super(NARXNet,self).__init__() 
-        self.lay1 = nn.Linear(n_in,n_hidden_nodes).double() 
-        self.lay2 = nn.Linear(n_hidden_nodes,1).double() 
+        self.lay1 = nn.Linear(n_in,n_hidden_nodes).double()
+        self.lay2 = nn.Linear(n_hidden_nodes,1) .double()
     
     def forward(self,x): 
         #x = concatenated [upast and ypast] 

@@ -164,7 +164,7 @@ cython_debug/
 
 # Ignore models
 models/
-
+*.pth
 # Ignore logs
 
 logs/
@@ -172,3 +172,4 @@ logs/
 # Ignore Mac OS configuration files
 
 .DS_Store
+
