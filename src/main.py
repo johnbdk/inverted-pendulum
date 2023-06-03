@@ -5,7 +5,7 @@ import argparse
 
 # Local Relative Imports
 from config.definitions import *
-# from ann.model import train_ann, eval_ann
+from ann.model import train_ann, eval_ann
 from gp.model import PendulumManager
 
 ###########  P A R A M E T E R S  ###########
@@ -53,16 +53,16 @@ def __main__():
     if args.train:
         if args.name == 'gp':
             PendulumManager()
-        # elif args.name == 'ann':
-            # train_ann()
-            # print("Training of the model has been completed")
+        elif args.name == 'ann':
+            train_ann()
+            print("Training of the model has been completed")
     elif args.test:
         if args.name == 'gp':
             PendulumManager()
         elif args.name == 'ann':
-            # if eval_ann(args.mode_path, args.model_arch):
-                # print("Evaluation of the model has been completed")
-            # else:
+            if eval_ann(args.mode_path, args.model_arch):
+                print("Evaluation of the model has been completed")
+            else:
                 print("Model file does not exists")
 
 if __name__ == '__main__':
