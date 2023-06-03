@@ -1,10 +1,8 @@
-import pandas as pd
+# External Imports
 import torch
-from torch.utils.data import random_split, Dataset
-import matplotlib.pyplot as plt
 import numpy as np
-
-PATH = "data/training-data.csv"
+import pandas as pd
+from torch.utils.data import random_split, Dataset
 
 class DiskDataset(Dataset):
     def __init__(self, file, na, nb, transform = None):
@@ -46,5 +44,3 @@ def split(dataset, percent):
     test_size = dataset_size - train_size
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
     return train_dataset, test_dataset
-
-

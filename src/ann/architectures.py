@@ -1,9 +1,10 @@
-from torch import nn
+# External Imports
 import torch
+from torch import nn
 
-class Network_NARX(nn.Module): 
+class NARXNet(nn.Module): 
     def __init__(self, n_in, n_hidden_nodes): 
-        super(Network_NARX,self).__init__() 
+        super(NARXNet,self).__init__() 
         self.lay1 = nn.Linear(n_in,n_hidden_nodes).double() 
         self.lay2 = nn.Linear(n_hidden_nodes,1).double() 
     
@@ -14,10 +15,10 @@ class Network_NARX(nn.Module):
         return y 
     
     
-class Network_NOE(nn.Module): 
+class NOENet(nn.Module): 
     def __init__(self, **kwargs): 
         # invoke nn.Module constructor
-        super(Network_NOE,self).__init__() 
+        super(NOENet,self).__init__() 
 
         self.in_layer = nn.Linear(in_features=kwargs["input_shape"], out_features=1)
         self.out_layer = nn.Linear(in_features=1, out_features=1)
@@ -25,17 +26,8 @@ class Network_NOE(nn.Module):
     def forward(self, input): 
         output = input
         return output
-
-class RNN(nn.Module):
-    def __init__(self):
-        super(RNN, self).__init__()
-        # Initialize your RNN model here
-        self.rnn = RNN()
-
-    def forward(self, x):
-        # Forward pass of your RNN model
-        return self.rnn(x)
     
+
 class LSTMNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTMNet, self).__init__()
@@ -48,10 +40,12 @@ class LSTMNet(nn.Module):
         c0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])  # Use the last time step's output
-        return out    
-class EncoderRNN(nn.Module):
+        return out
+
+
+class EncoderRNNNet(nn.Module):
     def __init__(self, input_size, hidden_size):
-        super(EncoderRNN, self).__init__()
+        super(EncoderRNNNet, self).__init__()
         self.hidden_size = hidden_size
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.rnn = nn.GRU(hidden_size, hidden_size)
