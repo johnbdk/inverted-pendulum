@@ -17,3 +17,15 @@ BATCH_SIZE = 1000
 # series length
 NA = 2
 NB = 2
+
+
+from enum import Enum
+
+class ModelRepresentation(Enum):
+    NARX = 0
+    NOE = 1
+    SS = 2
+
+class IdentificationMethod(Enum):
+    GP = 0
+    NN = 1

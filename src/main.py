@@ -6,7 +6,7 @@ import argparse
 # Local Relative Imports
 from config.definitions import *
 from ann.model import train_ann, eval_ann
-from gp.model import PendulumManager
+from gp.model import PendulumGPManager
 
 ###########  P A R A M E T E R S  ###########
 
@@ -30,31 +30,33 @@ parent_parser.add_argument('--model-arch', type=str, choices=['narx', 'noe', 'ss
 
 # Define Arguments
 parser = argparse.ArgumentParser(parents=[parent_parser])
-subparsers = parser.add_subparsers(title="actions")
-parser_method = subparsers.add_parser("method", parents=[parent_parser],
+subparsers = parser.add_subparsers(title="actions", dest="method")
+parser_ann = subparsers.add_parser("ann", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP)')
-parser_method.add_argument('--gp', action='store_true', default=False, help="name of the method to be used")
-parser_method.add_argument('--ann', action='store_true', default=False, help="name of the method to be used")
+# parser_ann.add_argument('--model-arch', type=str, choices=['narx', 'noe', 'ss'], default='narx',
+#                            required=False, help='Choose model architecture')
 
-# parser_mode = subparsers.add_parser("mode", parents=[parent_parser], add_help=False,
-#                                       description="The mode parser", help="Mode to be chosen (Train or Test)")
+parser_gp = subparsers.add_parser("gp", parents=[parent_parser],
+                                      description='The method parser', help='Method to be chosen (ANN or GP)')
+parser_gp.add_argument('--sparse', action='store_true', default=False, help="name of the method to be used")
+parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model')
 
 def __main__():
     # Compile Arguments
     args = parser.parse_args()
-    print(parser.print_help())
-    print(args)
+    # print(parser.print_help())
+    # print(args)
 
     if args.train:
-        if args.gp:
-            PendulumManager()
-        elif args.ann:
+        if args.method == 'gp':
+            PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+        elif args.method == 'ann':
             train_ann()
             print("Training of the model has been completed")
     elif args.test:
-        if args.gp:
-            PendulumManager()
-        elif args.ann:
+        if args.method == 'gp':
+            PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+        elif args.method == 'ann':
             if eval_ann(args.mode_path, args.model_arch):
                 print("Evaluation of the model has been completed")
             else:

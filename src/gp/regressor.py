@@ -1,12 +1,17 @@
 # External libraries
+import numpy as np
+from matplotlib import pyplot as plt
+
+# scikit-learn
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from sklearn.gaussian_process import GaussianProcessRegressor
-from matplotlib import pyplot as plt
-import numpy as np
 
+# GPy
+import GPy
+import GPy.plotting.gpy_plot as gpy_plot
 
 class PendulumGP:
-    """This class represents a Gaussian Process model for a Pendulum system."""
+    """This class represents a Full Gaussian Process model for a Pendulum system."""
 
     def __init__(self) -> None:
         """
@@ -41,7 +46,8 @@ class PendulumGP:
         numpy.ndarray: Predicted output variables.
         numpy.ndarray: Standard deviations of the predictions.
         """
-        return self.gp.predict(X, return_std=True)
+        y_pred, y_std = self.gp.predict(X, return_std=True)
+        return y_pred[:, None], y_std[:, None]
 
     def plot(self, X : np.ndarray, Y : np.ndarray, Y_pred : np.ndarray, sigma : np.ndarray) -> None:
         """
@@ -86,5 +92,61 @@ class PendulumGP:
         plt.legend()
         plt.grid()
 
-        
         plt.show()
+
+class PendulumSGP:
+    """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
+
+    def __init__(self, X : np.ndarray, Y : np.ndarray, Z : np.ndarray) -> None:
+
+        # define kernel
+        self.kernel = GPy.kern.RBF(input_dim=6, lengthscale=1.0, variance=1.0)
+
+        # define regressor
+        if Y.ndim == 1:
+            Y = Y[:, None]
+        self.gp = GPy.models.SparseGPRegression(X, Y, kernel=self.kernel, Z=Z)
+
+        print('%s initialized with kernel:%s' % (__class__.__name__, self.kernel))
+
+    def fit(self, X : np.ndarray, Y : np.ndarray) -> None:
+        self.gp.optimize('bfgs')
+
+    def predict(self, X : np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return self.gp.predict(X)
+        
+    def plot(self, X : np.ndarray, Y : np.ndarray, Y_pred : np.ndarray, sigma : np.ndarray):
+
+        time = np.arange(X.shape[0])
+
+        # Plot original data
+        plt.figure()
+        plt.subplot(3, 1, 1)
+        plt.plot(time, X, label='Input Voltage u (GT)')
+        plt.plot(time, Y, label='Output Angle th (GT)')
+        plt.xlabel('time')
+        plt.ylabel('Input Voltage (u)')
+        plt.title('Original Pendulum Data')
+        plt.legend()
+        plt.grid()
+
+
+        plt.subplot(3, 1, 2)
+        plt.plot(time, Y)
+        plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
+        plt.title('Prediction with error bar')
+        plt.grid()
+
+
+        # Plot error
+        plt.subplot(3, 1, 3)
+        plt.plot(time, Y-Y_pred, label='Output angle error')
+        plt.xlabel('time')
+        plt.ylabel('Estimation error (th)')
+        plt.title('Sparse GP Estimation Error')
+        plt.legend()
+        plt.grid()
+
+        plt.show()
+        print ("Log-likelihood: {}".format(self.gp.log_likelihood()))
+        
