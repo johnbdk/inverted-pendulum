@@ -1,6 +1,7 @@
 # External Imports
 import torch
 from torch import nn
+import numpy as np
 
 class NARXNet(nn.Module): 
     def __init__(self, n_in, n_hidden_nodes): 
@@ -16,17 +17,82 @@ class NARXNet(nn.Module):
     
     
 class NOENet(nn.Module): 
-    def __init__(self, **kwargs): 
+    def __init__(self, hidden_size): 
         # invoke nn.Module constructor
         super(NOENet,self).__init__() 
+        self.hidden_size = hidden_size
+        self.in_size = 1
+        self.r_size = 20
+        self.output_size = 1
+        # net = lambda n_in,n_out: nn.Sequential(nn.Linear(n_in,40), \
+        #                                        nn.Sigmoid(), \
+        #                                        nn.Linear(40,n_out)).double() #new short hand
+        # self.h2h = net(self.input_size + hidden_size, self.hidden_size) #b=)
+        # self.h2o = net(self.input_size + hidden_size, self.output_size) #b=)
+                                                                        #[:,0] should be called after use of h2o
+        # self.input_layer = nn.Linear(self.in_size + self.r_size, self.hidden_size)
+        # self.activation = nn.Sigmoid()
+        # self.output_layer = nn.Linear(self.hidden_size, 1)
+        self.net1 = nn.Sequential(nn.Linear(self.in_size + self.r_size, 40),
+                                  nn.Sigmoid(),
+                                  nn.Linear(40, 1))
+        self.net_r = nn.Sequential(nn.Linear(self.in_size + self.r_size, 40),
+                                  nn.Sigmoid(),
+                                  nn.Linear(40, self.r_size))
 
-        self.in_layer = nn.Linear(in_features=kwargs["input_shape"], out_features=1)
-        self.out_layer = nn.Linear(in_features=1, out_features=1)
+        self.double()
     
-    def forward(self, input): 
-        output = input
+    def forward(self, input):
+        output = []
+        h = torch.zeros(input.shape[0], self.r_size, dtype=torch.float32)
+        # print(np.shape(h))
+        for t in range(input.shape[1]):
+            # print(np.shape(input))
+            inp = input[:,t]
+            inp = inp[:,None]
+
+            inp = torch.cat((inp,h), dim=1).double()
+            # print(np.shape(inp))
+            out = self.net1(inp)
+            h = self.net_r(inp)
+            # print(np.shape(h))
+            # print(np.shape(out)) 1000,1
+            # h = out
+            # print(np.shape(h))
+            # print(np.shape(h)) 
+            output.append(out)
+            # print(np.shape(output))
+            # print(np.shape(out)) 1000 1
+            # print(np.shape(torch.stack(output, dim=1)))
+        # print(np.shape(torch.stack(output, dim=1)))
+        output = torch.stack(output, dim=1)
+        output = torch.squeeze(output)
+        # print(np.shape(output))
         return output
     
+class simple_RNN(nn.Module):
+    def __init__(self, hidden_size):
+        super(simple_RNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.input_size = 1
+        self.output_size = 1
+        net = lambda n_in,n_out: nn.Sequential(nn.Linear(n_in,40), \
+                                               nn.Sigmoid(), \
+                                               nn.Linear(40,n_out)).double() #new short hand
+        self.h2h = net(self.input_size + hidden_size, self.hidden_size) #b=)
+        self.h2o = net(self.input_size + hidden_size, self.output_size) #b=)
+                                                                        #[:,0] should be called after use of h2o
+# Kajetan is a sexy beast
+    def forward(self, inputs):
+        #input.shape == (N_batch, N_time)
+        hidden = torch.zeros(inputs.shape[0], self.hidden_size, dtype=torch.float64) #c)
+        outputs = [] #c)
+        for i in range(inputs.shape[1]): #c)
+            u = inputs[:,i] #shape = (N_batch,) #c)
+            combined = torch.cat((hidden, u[:,None]), dim=1) #c) #shape = (N_batch,hidden_size+1)
+            outputs.append(self.h2o(combined)[:,0]) #c)
+            hidden = self.h2h(combined) #c)
+        return torch.stack(outputs,dim=1) #c)
 
 class LSTMNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):

@@ -5,8 +5,8 @@ import argparse
 
 # Local Relative Imports
 from config.definitions import *
-from ann.model import train_ann, eval_ann
-from gp.model import PendulumGPManager
+from ann.model import train_narx, train_noe, eval_ann
+# from gp.model import PendulumGPManager
 
 ###########  P A R A M E T E R S  ###########
 
@@ -49,13 +49,15 @@ def __main__():
 
     if args.train:
         if args.method == 'gp':
-            PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            pass
         elif args.method == 'ann':
-            train_ann()
+            train_noe()
             print("Training of the model has been completed")
     elif args.test:
         if args.method == 'gp':
-            PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            pass
         elif args.method == 'ann':
             if eval_ann(args.mode_path, args.model_arch):
                 print("Evaluation of the model has been completed")
