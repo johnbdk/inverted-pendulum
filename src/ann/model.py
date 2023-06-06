@@ -35,12 +35,12 @@ def train_narx():
     dataset = DiskDataset(file = dataset_name, na=NA, nb=NB)
 
     train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, BATCH_SIZE)
-    test_dataloader = DataLoader(test_dataset, BATCH_SIZE)
+    train_dataloader = DataLoader(train_dataset, batch_size=100)
+    test_dataloader = DataLoader(test_dataset, batch_size=100)
     eval_dataloader = DataLoader(dataset, batch_size=1)
 
     n_hidden_nodes = 32 
-    epochs = 20
+    epochs = 10
 
     model = NARXNet(NA+NB, n_hidden_nodes) 
     print(model)
@@ -53,7 +53,10 @@ def train_narx():
         t_loss = 0
         for u, th in train_dataloader:
             outputs = model(u)
-            train_Loss = loss_fcn(outputs, th)
+            th_s = torch.squeeze(th)
+            # print(np.shape(outputs))
+            # print(np.shape(th_s))
+            train_Loss = loss_fcn(outputs, th_s)
             # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
             optimizer.zero_grad() 
             train_Loss.backward() 
@@ -63,7 +66,8 @@ def train_narx():
         val_loss = 0
         for u, th in test_dataloader:
             outputs = model(u)
-            val_Loss = loss_fcn(outputs, th)
+            th_s = torch.squeeze(th)
+            val_Loss = loss_fcn(outputs, th_s)
             val_loss = val_loss + val_Loss.item()
         val_loss = val_loss/len(test_dataloader)
         
@@ -78,27 +82,31 @@ def train_narx():
         out = model(u)
         eval_pred.append(out.detach().numpy())
 
-    torch.save(model.state_dict(), 'models/Network_NARX.pth')
-
+    eval_out = np.reshape(eval_out, [79998,1])
     plt.plot(eval_out)
+    eval_pred = np.reshape(eval_pred, (79998,1))
     plt.plot(eval_pred)
     plt.show()
 
+    torch.save(model.state_dict(), 'Network_NARX.pth')
+
 def train_noe():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     # Load dataset
     fname = "training-data.csv"
     dataset_name = os.path.join(DATASET_DIR, fname)
-    dataset = DiskDataset(file = dataset_name, na=80, nb=0, nc=79)
+    dataset = DiskDataset(file = dataset_name, na=40, nb=0, nc=39)
 
     train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, BATCH_SIZE)
-    test_dataloader = DataLoader(test_dataset, BATCH_SIZE)
+    train_dataloader = DataLoader(train_dataset, batch_size=1)
+    test_dataloader = DataLoader(test_dataset, batch_size=1)
     eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
 
-    n_hidden_nodes = 64
+    n_hidden_nodes = 32
     epochs = 10
 
-    model = NOENet(n_hidden_nodes) 
+    model = NOENet(n_hidden_nodes).to(device) 
     print(model)
     optimizer = torch.optim.Adam(model.parameters()) 
     loss_fcn = torch.nn.MSELoss()
@@ -108,6 +116,7 @@ def train_noe():
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
+            u, th = u.to(device), th.to(device)
             outputs = model(u)
             # print(u)
             # print(th)
@@ -125,6 +134,7 @@ def train_noe():
         t_loss = t_loss/len(train_dataloader)
         val_loss = 0
         for u, th in test_dataloader:
+            u, th = u.to(device), th.to(device)
             outputs = model(u)
             val_Loss = loss_fcn(outputs, th)
             val_loss = val_loss + val_Loss.item()
@@ -137,6 +147,7 @@ def train_noe():
     eval_out =[]
     eval_pred = []
     for u, th in eval_dataloader:
+        u, th = u.to(device), th.to(device)
         eval_out.append(th.detach().numpy())
         print(np.shape(eval_out))
         out = model(u)
@@ -145,12 +156,14 @@ def train_noe():
 
     eval_out = np.squeeze(eval_out)
     eval_pred = np.squeeze(eval_pred)
-    torch.save(model.state_dict(), 'models/Network_NOE.pth')
+    
 
     plt.plot(eval_out[:,-1])
     # eval_pred = np.reshape(eval_pred, (79999,1))
     plt.plot(eval_pred[:,-1])
     plt.show()
+
+    torch.save(model.state_dict(), 'models/Network_NOE.pth')
 
 def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs):
     epoch_train_loss = []

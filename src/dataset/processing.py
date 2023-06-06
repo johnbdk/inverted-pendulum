@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 import pandas as pd
-from torch.utils.data import Subset, Dataset
+from torch.utils.data import Subset, Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 class DiskDataset(Dataset):
@@ -36,11 +36,24 @@ class DiskDataset(Dataset):
 
         return [u, th]
 
-# dataset = DiskDataset('data/training-data.csv',2,0)
+dataset = DiskDataset('data/training-data.csv',1,0)
+dataloader = DataLoader(dataset, batch_size=dataset.__len__(), shuffle = False)
+for u, th in dataloader:
+    u_mean, u_std = torch.mean(u), torch.std(u)
+    th_mean, th_std = torch.mean(th), torch.std(th)
+
+print(u_mean, u_std)
 # len = dataset.__len__()
 # print(len)
 # print(dataset.__getitem__(0))
 # print(dataset.__getitem__(len-1))
+
+def normalize(dataset):
+    dataloader = DataLoader(dataset, batch_size=dataset.__len__(), shuffle = False)
+    for u, th in dataloader:
+        u_mean, u_std = torch.mean(u), torch.std(u)
+        th_mean, th_std = torch.mean(th), torch.std(th)
+    return u_mean, u_std, th_mean, th_std
 
 def split(dataset, percent):
     dataset_size = len(dataset)

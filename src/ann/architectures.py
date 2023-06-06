@@ -24,21 +24,13 @@ class NOENet(nn.Module):
         self.in_size = 1
         self.r_size = 20
         self.output_size = 1
-        # net = lambda n_in,n_out: nn.Sequential(nn.Linear(n_in,40), \
-        #                                        nn.Sigmoid(), \
-        #                                        nn.Linear(40,n_out)).double() #new short hand
-        # self.h2h = net(self.input_size + hidden_size, self.hidden_size) #b=)
-        # self.h2o = net(self.input_size + hidden_size, self.output_size) #b=)
-                                                                        #[:,0] should be called after use of h2o
-        # self.input_layer = nn.Linear(self.in_size + self.r_size, self.hidden_size)
-        # self.activation = nn.Sigmoid()
-        # self.output_layer = nn.Linear(self.hidden_size, 1)
-        self.net1 = nn.Sequential(nn.Linear(self.in_size + self.r_size, 40),
+
+        self.net1 = nn.Sequential(nn.Linear(self.in_size + self.r_size, 80),
                                   nn.Sigmoid(),
-                                  nn.Linear(40, 1))
-        self.net_r = nn.Sequential(nn.Linear(self.in_size + self.r_size, 40),
+                                  nn.Linear(80, 1))
+        self.net_r = nn.Sequential(nn.Linear(self.in_size + self.r_size, 80),
                                   nn.Sigmoid(),
-                                  nn.Linear(40, self.r_size))
+                                  nn.Linear(80, self.r_size))
 
         self.double()
     

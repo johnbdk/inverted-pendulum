@@ -52,7 +52,10 @@ def __main__():
             # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
             pass
         elif args.method == 'ann':
-            train_noe()
+            if args.model_arch == 'narx':
+                train_narx()
+            elif args.model_arch == 'noe': 
+                train_noe()
             print("Training of the model has been completed")
     elif args.test:
         if args.method == 'gp':
