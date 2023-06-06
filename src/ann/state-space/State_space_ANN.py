@@ -5,148 +5,108 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
 
 # Step 1: Load and preprocess the npz file
-data = np.load("disc-benchmark-files/training-data.npz")  # Replace 'data.npz' with the path to your npz file
-u = data['u'].reshape(-1, 1)
-theta = data['th'].reshape(-1, 1)
-
-# Normalize the input and output
-scaler = MinMaxScaler(feature_range=(-1, 1))
-u_normalized = u
-theta_normalized = theta
-
-# Convert data to PyTorch tensors
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-u_tensor = torch.tensor(u_normalized, dtype=torch.float32).to(device)
-theta_tensor = torch.tensor(theta_normalized, dtype=torch.float32).to(device)
+data = np.load("data/training-data.npz")  # Replace 'data.npz' with the path to your npz file
+u = data['u']
+theta = data['th']
 
 # Step 2: Split the data into training and testing sets
-utrain, uval, theta_train, theta_test = train_test_split(u_tensor, theta_tensor, test_size=0.5)
+u_train, u_val, theta_train, theta_val = train_test_split(u, theta, test_size=0.5)
 
-# Step 3: Divide the data into batches
-batch_size = 32
+u_mean, u_std = np.mean(u_train), np.std(u_train)
+theta_mean, theta_std = np.mean(theta_train), np.std(theta_train)
 
-def divide_batches(input_data, output_data, batch_size):
-    num_batches = len(input_data) // batch_size
-    input_batches = torch.split(input_data[:num_batches * batch_size], batch_size)
-    output_batches = torch.split(output_data[:num_batches * batch_size], batch_size)
-    return input_batches, output_batches
+utrain = (u_train - u_mean) / u_std
+thetatrain = (theta_train - theta_mean) / theta_std
 
-utrain_batches, theta_train_batches = divide_batches(utrain, theta_train, batch_size)
-uval_batches, theta_test_batches = divide_batches(uval, theta_test, batch_size)
+uval = (u_val - u_mean) / u_std
+thetaval = (theta_val - theta_mean) / theta_std
 
-# Step 5: Plot the training and testing data
-plt.plot(theta_train)
-plt.plot(theta_test)
+plt.plot(thetatrain)
+plt.plot(thetaval)
 plt.xlabel('k')
 plt.ylabel('y')
 plt.show()
 
+import torch
+
 def make_OE_data(udata, ydata, nf=100):
-    U = []
-    Y = []
+    U = [] #[u[k-nf],...,u[k]]
+    Y = [] #[y[k-nf],...,y[k]]
     for k in range(nf, len(udata) + 1):
         U.append(udata[k - nf:k])
         Y.append(ydata[k - nf:k])
+    return np.array(U), np.array(Y)
 
-    # Pad the sequences to have consistent lengths
-    max_len = max(len(seq) for seq in U + Y)
-    U = [np.pad(seq, (0, max_len - len(seq))) for seq in U]
-    Y = [np.pad(seq, (0, max_len - len(seq))) for seq in Y]
+nfuture = 40
+convert = lambda x: [torch.tensor(xi, dtype=torch.float64) for xi in x]
+Utrain, Thetatrain = convert(make_OE_data(utrain, thetatrain, nf=nfuture))
+Uval, Thetaval = convert(make_OE_data(uval, thetaval, nf=len(uval)))
 
-    return np.array(U), np.array(Y).reshape(-1, max_len)
-
-
-nfuture = 100
-convert = lambda x: [torch.tensor(xi, dtype=torch.float64).to(device) for xi in x]
-
-Utrain, Ytrain = convert(make_OE_data(utrain, theta_train, nf=nfuture))
-Uval, Yval = convert(make_OE_data(uval, theta_test, nf=len(uval)))  # uses the whole data set for OE
-
-print(utrain.shape,theta_train.shape, Utrain.shape, Ytrain.shape)
-
-
-
-# Define the RNN model
-class RNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(RNN, self).__init__()
+print(Uval.shape)
+print(Thetaval.shape)
+print(Utrain.shape)  # torch.Size([39961, 40])
+print(Thetatrain.shape)  # torch.Size([39961, 40])
+class simple_lstm(nn.Module):
+    def __init__(self, hidden_size):
+        super(simple_lstm, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = 1
         self.output_size = 1
-        net = lambda n_in,n_out: nn.Sequential(nn.Linear(n_in,40), \
-                                               nn.Sigmoid(), \
-                                               nn.Linear(40,n_out)).double() 
-        self.hh2 = net(self.input_size + hidden_size, self.hidden_size) 
-        self.h2o = net(self.input_size + hidden_size, self.output_size) 
-                                                                        
+        net = lambda n_in, n_out: nn.Sequential(nn.Linear(n_in, 40), nn.Sigmoid(), nn.Linear(40, n_out))  # shorthand for a 1 hidden layer NN
+        self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=hidden_size, batch_first=True).double()
+        self.h2o = net(hidden_size + self.input_size, self.output_size).double()
 
     def forward(self, inputs):
-       
-        hidden = torch.zeros(inputs.shape[0], self.hidden_size, dtype=torch.float64)
-        outputs = [] 
-        for i in range(inputs.shape[1]): 
-            u = inputs[:,i] 
-            combined = torch.cat((hidden, u), dim=1) 
-            outputs.append(self.h2o(combined)[:,0]) 
-            hidden = self.hh2(combined) 
-        return torch.stack(outputs,dim=1)
-     
-input_size = Utrain.shape[2]
-hidden_size = 32
-output_size = Ytrain.shape[1]
-learning_rate = 0.01
-num_epochs = 10
+        hiddens, (h_n, c_n) = self.lstm(inputs[:, :, None])
+        combined = torch.cat((hiddens, inputs[:, :, None]), dim=2)
 
-# Initialize the RNN model
-model = RNN(input_size, hidden_size, output_size).to(device)
+        h2o_input = combined.view(-1, self.hidden_size + self.input_size)
+        y_predict = self.h2o(h2o_input).view(inputs.shape[0], inputs.shape[1])
 
-# Define the loss function and optimizer
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        return y_predict
 
-# Training loop
-train_losses = []
-val_losses = []
-for epoch in range(num_epochs):
-    model.train()
-    optimizer.zero_grad()
-    outputs = model(Utrain)
-    loss = criterion(outputs, Ytrain.squeeze())
-    loss.backward()
-    optimizer.step()
-    train_losses.append(loss.item())
 
-    model.eval()
+n_burn = 20
+model = simple_lstm(hidden_size=15)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001)  # Use SGD optimizer with 
+batch_size = 32
+for epoch in range(4):
+    for i in range(0, len(Utrain), batch_size):
+        Uin = Utrain[i:i+batch_size]
+        Yout = model.forward(inputs=Uin)
+        Yin = Thetatrain[i:i+batch_size]
+
+        # Apply sigmoid activation to the model's output
+        Yout_sigmoid = torch.sigmoid(Yout)
+
+        # Calculate binary cross-entropy loss
+        Loss = nn.BCELoss()(Yout_sigmoid[:, n_burn:], Yin[:, n_burn:])
+        optimizer.zero_grad()
+        Loss.backward()
+        optimizer.step()
+
     with torch.no_grad():
-        val_outputs = model(Uval)
-        val_loss = criterion(val_outputs, Yval)
-        val_losses.append(val_loss.item())
+        Yval_out = model(inputs=Uval)
+        Yval_out_sigmoid = torch.sigmoid(Yval_out)
+        Loss_val = nn.BCELoss()(Yval_out_sigmoid[:, n_burn:], Thetaval[:, n_burn:])
 
-    if epoch % 10 == 0:
-        print(f"Epoch {epoch}/{num_epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}")
+        Ytrain_out = model(inputs=Utrain)
+        Ytrain_out_sigmoid = torch.sigmoid(Ytrain_out)
+        Loss_train = nn.BCELoss()(Ytrain_out_sigmoid[:, n_burn:], Thetatrain[:, n_burn:])
 
-# Plot the training and validation losses
-plt.plot(train_losses, label='Train Loss')
-plt.plot(val_losses, label='Val Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-plt.show()
-
+        print(f'epoch={epoch}, Validation Loss={Loss_val.item():.2%}, Train Loss={Loss_train.item():.2%}')
 with torch.no_grad():
-    plt.plot(Yval[0])
-    plt.plot(model(Uval)[0], '--')  # Remove the 'inputs=' keyword argument
+    plt.plot(Thetaval[0])
+    plt.plot(model(inputs=Uval)[0],'--')
     plt.xlabel('k')
     plt.ylabel('y')
-    plt.xlim(0, 250)
-    plt.legend(['real', 'predicted'])
+    plt.xlim(0,250)
+    plt.legend(['real','predicted'])
     plt.show()
-
-    plt.plot(np.mean((Ytrain - model(Utrain)).numpy()**2, axis=0)**0.5)  # average over the error in batch
-    plt.title('batch averaged time-dependent error')
+    plt.plot(np.mean((Thetatrain-model(inputs=Utrain)).numpy()**2,axis=0)**0.5)
     plt.ylabel('error')
-    plt.xlabel('i')
-    plt.grid()
+    plt.xlabel('time')
     plt.show()
