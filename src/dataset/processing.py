@@ -29,20 +29,21 @@ class DiskDataset(Dataset):
         u = torch.tensor(np.concatenate([data_u, data_th]))
         th = torch.tensor(data_th_out)
         # u = torch.tensor([self.data.iloc[index, 0], self.data.iloc[index, 1]])
-
+        
         if self.transform:
             u = self.transform(u)
             th = self.transform(th)
 
         return [u, th]
 
-dataset = DiskDataset('data/training-data.csv',1,0)
-dataloader = DataLoader(dataset, batch_size=dataset.__len__(), shuffle = False)
-for u, th in dataloader:
-    u_mean, u_std = torch.mean(u), torch.std(u)
-    th_mean, th_std = torch.mean(th), torch.std(th)
+# dataset = DiskDataset('data/training-data.csv',1,0)
+# dataloader = DataLoader(dataset, batch_size=dataset.__len__(), shuffle = False)
+# for u, th in dataloader:
+#     u_mean, u_std = torch.mean(u), torch.std(u)
+#     th_mean, th_std = torch.mean(th), torch.std(th)
 
-print(u_mean, u_std)
+# print(u_mean, u_std)
+# print(th_mean, th_std)
 # len = dataset.__len__()
 # print(len)
 # print(dataset.__getitem__(0))

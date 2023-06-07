@@ -25,38 +25,30 @@ class NOENet(nn.Module):
         self.r_size = 20
         self.output_size = 1
 
-        self.net1 = nn.Sequential(nn.Linear(self.in_size + self.r_size, 80),
+        self.net1 = nn.Sequential(nn.Linear(self.in_size + self.hidden_size, self.hidden_size),
                                   nn.Sigmoid(),
-                                  nn.Linear(80, 1))
-        self.net_r = nn.Sequential(nn.Linear(self.in_size + self.r_size, 80),
+                                  nn.Linear(self.hidden_size, 1))
+        self.net_r = nn.Sequential(nn.Linear(self.in_size + self.hidden_size, self.hidden_size),
                                   nn.Sigmoid(),
-                                  nn.Linear(80, self.r_size))
+                                  nn.Linear(self.hidden_size, self.hidden_size))
 
         self.double()
     
     def forward(self, input):
         output = []
-        h = torch.zeros(input.shape[0], self.r_size, dtype=torch.float32)
-        # print(np.shape(h))
+        h = torch.zeros(input.shape[0], self.hidden_size, dtype=torch.float32)
+
         for t in range(input.shape[1]):
-            # print(np.shape(input))
+
             inp = input[:,t]
             inp = inp[:,None]
 
             inp = torch.cat((inp,h), dim=1).double()
-            # print(np.shape(inp))
             out = self.net1(inp)
             h = self.net_r(inp)
-            # print(np.shape(h))
-            # print(np.shape(out)) 1000,1
-            # h = out
-            # print(np.shape(h))
-            # print(np.shape(h)) 
+
             output.append(out)
-            # print(np.shape(output))
-            # print(np.shape(out)) 1000 1
-            # print(np.shape(torch.stack(output, dim=1)))
-        # print(np.shape(torch.stack(output, dim=1)))
+
         output = torch.stack(output, dim=1)
         output = torch.squeeze(output)
         # print(np.shape(output))
@@ -74,7 +66,6 @@ class simple_RNN(nn.Module):
         self.h2h = net(self.input_size + hidden_size, self.hidden_size) #b=)
         self.h2o = net(self.input_size + hidden_size, self.output_size) #b=)
                                                                         #[:,0] should be called after use of h2o
-# Kajetan is a sexy beast
     def forward(self, inputs):
         #input.shape == (N_batch, N_time)
         hidden = torch.zeros(inputs.shape[0], self.hidden_size, dtype=torch.float64) #c)

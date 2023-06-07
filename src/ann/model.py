@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 # Local Relative Imports
 from config.definitions import *
 from ann.architectures import NARXNet, NOENet
-from dataset.processing import DiskDataset, split
+from dataset.processing import DiskDataset, split, normalize
 
 
 def load_model(fname):
@@ -35,12 +35,14 @@ def train_narx():
     dataset = DiskDataset(file = dataset_name, na=NA, nb=NB)
 
     train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, batch_size=100)
-    test_dataloader = DataLoader(test_dataset, batch_size=100)
-    eval_dataloader = DataLoader(dataset, batch_size=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=train_dataset.__len__(), shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=test_dataset.__len__(), shuffle=False)
+    eval_dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    u_mean, u_std, th_mean, th_std = normalize(train_dataset)
 
     n_hidden_nodes = 32 
-    epochs = 10
+    epochs = 5
 
     model = NARXNet(NA+NB, n_hidden_nodes) 
     print(model)
@@ -52,6 +54,7 @@ def train_narx():
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
+
             outputs = model(u)
             th_s = torch.squeeze(th)
             # print(np.shape(outputs))
@@ -96,27 +99,31 @@ def train_noe():
     # Load dataset
     fname = "training-data.csv"
     dataset_name = os.path.join(DATASET_DIR, fname)
-    dataset = DiskDataset(file = dataset_name, na=40, nb=0, nc=39)
+    dataset = DiskDataset(file = dataset_name, na=30, nb=0, nc=29)
 
     train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, batch_size=1)
-    test_dataloader = DataLoader(test_dataset, batch_size=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=64)
+    test_dataloader = DataLoader(test_dataset, batch_size=64)
     eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
 
-    n_hidden_nodes = 32
-    epochs = 10
-
+    n_hidden_nodes = 20
+    epochs = 5
+    n_burn = 10
     model = NOENet(n_hidden_nodes).to(device) 
     print(model)
+
     optimizer = torch.optim.Adam(model.parameters()) 
     loss_fcn = torch.nn.MSELoss()
 
+    u_mean, u_std, th_mean, th_std = normalize(train_dataset)
     epoch_train_loss = []
     epoch_val_loss = []
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
-            u, th = u.to(device), th.to(device)
+            u = u-u_mean/u_std
+            th = th-th_mean/th_std
+            # u, th = u.to(device), th.to(device)
             outputs = model(u)
             # print(u)
             # print(th)
@@ -125,7 +132,8 @@ def train_noe():
             # outputs = torch.squeeze(outputs)
             # print(np.shape(outputs))
             # print('-----------')
-            train_Loss = loss_fcn(outputs, th)
+            # train_Loss = loss_fcn(outputs, th)
+            train_Loss = torch.mean((outputs-th)[:,n_burn:]**2)
             # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
             optimizer.zero_grad() 
             train_Loss.backward() 
