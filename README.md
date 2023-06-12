@@ -26,7 +26,7 @@ Eg. to RE-train ANN with architecture narx and display detailed processing infor
 python .\main.py ann --train --model-arch narx --model-path narx.pth --verbose
 ```
 
-As you can see, on the last example we spacified the model name also. This is because we, first, need to load the model, save its current state and continue its training.
+As you can see, on the last example we also specified the model name. This is because we, need to load the model first, save its current state and continue its training.
 
 ```bash
 python main.py gp --sparse --inducing 10 --train

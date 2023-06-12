@@ -7,7 +7,7 @@ class NARXNet(nn.Module):
     def __init__(self, n_in, n_hidden_nodes): 
         super(NARXNet,self).__init__() 
         self.lay1 = nn.Linear(n_in,n_hidden_nodes).double()
-        self.lay2 = nn.Linear(n_hidden_nodes,1) .double()
+        self.lay2 = nn.Linear(n_hidden_nodes,1).double()
     
     def forward(self,x): 
         #x = concatenated [upast and ypast] 
@@ -15,8 +15,62 @@ class NARXNet(nn.Module):
         y = self.lay2(x1)[:,0] 
         return y 
     
-    
 class NOENet(nn.Module): 
+    def __init__(self, hidden_size = 32, u_size = 2, s_size = 2, out_size = 1): 
+        # invoke nn.Module constructor
+        super(NOENet,self).__init__() 
+        self.u_size = u_size
+        self.s_size = s_size
+        self.output_size = out_size
+        self.hidden_size = hidden_size
+
+        self.lay1 = nn.Linear(self.u_size + self.s_size, self.hidden_size)
+        self.lay2 = nn.Linear(self.hidden_size, 1)
+
+        self.rlay1 = nn.Linear(self.u_size + self.s_size, self.hidden_size)
+        self.rlay2 = nn.Linear(self.hidden_size, self.s_size)
+
+        self.narx_net = nn.Sequential(nn.Linear(self.u_size + self.s_size, self.hidden_size),
+                                  nn.Sigmoid(),
+                                  nn.Linear(self.hidden_size, 1))
+        
+
+        self.rec_net = nn.Sequential(nn.Linear(self.u_size + self.s_size, self.hidden_size),
+                                  nn.Sigmoid(),
+                                  nn.Linear(self.hidden_size, self.s_size))
+        
+        # make it double
+        self.double()
+
+    def forward(self, input):
+        # bathes, time
+        output = []
+
+        # h_0
+        h = torch.zeros(input.shape[0], self.s_size, dtype=torch.float32)
+
+        for t in range(input.shape[1]-1):
+
+            # prepare the inputs
+            inp = input[:, t:t + self.u_size]
+            # print("input size", np.shape(inp))
+            # print("input", inp)
+
+            inp = torch.cat((inp,h), dim=1).double()
+
+            out = torch.sigmoid((self.lay1(inp)))
+            out = self.lay2(out)
+            # out = self.narx_net(inp)
+            h = torch.sigmoid((self.rlay1(inp)))
+            h = self.rlay2(h)
+            # h = self.rec_net(inp)
+            output.append(out)
+        output = torch.stack(output, dim=1)
+        output = torch.squeeze(output)
+
+        return output
+    
+class NOENet2(nn.Module): 
     def __init__(self, hidden_size): 
         # invoke nn.Module constructor
         super(NOENet,self).__init__() 
@@ -31,24 +85,18 @@ class NOENet(nn.Module):
         self.net_r = nn.Sequential(nn.Linear(self.in_size + self.hidden_size, self.hidden_size),
                                   nn.Sigmoid(),
                                   nn.Linear(self.hidden_size, self.hidden_size))
-
         self.double()
-    
     def forward(self, input):
         output = []
         h = torch.zeros(input.shape[0], self.hidden_size, dtype=torch.float32)
-
         for t in range(input.shape[1]):
-
             inp = input[:,t]
             inp = inp[:,None]
 
             inp = torch.cat((inp,h), dim=1).double()
             out = self.net1(inp)
             h = self.net_r(inp)
-
             output.append(out)
-
         output = torch.stack(output, dim=1)
         output = torch.squeeze(output)
         # print(np.shape(output))

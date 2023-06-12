@@ -34,15 +34,15 @@ def train_narx():
     dataset_name = os.path.join(DATASET_DIR, fname)
     dataset = DiskDataset(file = dataset_name, na=NA, nb=NB)
 
-    train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, batch_size=train_dataset.__len__(), shuffle=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=test_dataset.__len__(), shuffle=False)
+    train_dataset, test_dataset = split(dataset, 0.8)
+    train_dataloader = DataLoader(train_dataset, batch_size=100, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=100, shuffle=False)
     eval_dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     u_mean, u_std, th_mean, th_std = normalize(train_dataset)
 
     n_hidden_nodes = 32 
-    epochs = 5
+    epochs = 10
 
     model = NARXNet(NA+NB, n_hidden_nodes) 
     print(model)
@@ -54,11 +54,10 @@ def train_narx():
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
-
+            u = (u-u_mean)/u_std
+            th = (th-th_mean)/th_std
             outputs = model(u)
             th_s = torch.squeeze(th)
-            # print(np.shape(outputs))
-            # print(np.shape(th_s))
             train_Loss = loss_fcn(outputs, th_s)
             # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
             optimizer.zero_grad() 
@@ -68,6 +67,8 @@ def train_narx():
         t_loss = t_loss/len(train_dataloader)
         val_loss = 0
         for u, th in test_dataloader:
+            u = (u-u_mean)/u_std
+            th = (th-th_mean)/th_std
             outputs = model(u)
             th_s = torch.squeeze(th)
             val_Loss = loss_fcn(outputs, th_s)
@@ -99,17 +100,22 @@ def train_noe():
     # Load dataset
     fname = "training-data.csv"
     dataset_name = os.path.join(DATASET_DIR, fname)
-    dataset = DiskDataset(file = dataset_name, na=30, nb=0, nc=29)
+    dataset = DiskDataset(file = dataset_name, na=80, nb=0, nc=79)
 
-    train_dataset, test_dataset = split(dataset, 0.9)
-    train_dataloader = DataLoader(train_dataset, batch_size=64)
-    test_dataloader = DataLoader(test_dataset, batch_size=64)
+    test_dataset, train_dataset = split(dataset, 0.1)
+    train_dataloader = DataLoader(train_dataset, batch_size=32)
+    test_dataloader = DataLoader(test_dataset, batch_size=32)
     eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
 
-    n_hidden_nodes = 20
-    epochs = 5
-    n_burn = 10
-    model = NOENet(n_hidden_nodes).to(device) 
+    epochs = 10
+    n_burn = 40
+    hidden_size = 32
+    input_size = 2
+    s_size = 2
+    output_size = 1
+    model = NOENet(hidden_size, input_size, s_size, output_size)
+    if 0:
+        model.load_state_dict(torch.load('Network_NOE.pth'))
     print(model)
 
     optimizer = torch.optim.Adam(model.parameters()) 
@@ -121,32 +127,32 @@ def train_noe():
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
+            # print("u", u)
+            # print("th", th)
+            th = th[:,1:]
             u = u-u_mean/u_std
             th = th-th_mean/th_std
-            # u, th = u.to(device), th.to(device)
+            # print("th", np.shape(th))
             outputs = model(u)
-            # print(u)
-            # print(th)
-            # print(np.shape(outputs))
-            # print(np.shape(th))
-            # outputs = torch.squeeze(outputs)
-            # print(np.shape(outputs))
-            # print('-----------')
-            # train_Loss = loss_fcn(outputs, th)
+            # print("outputs", np.shape(outputs))
             train_Loss = torch.mean((outputs-th)[:,n_burn:]**2)
             # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
             optimizer.zero_grad() 
             train_Loss.backward() 
             optimizer.step()  
             t_loss = t_loss + train_Loss.item()
-        t_loss = t_loss/len(train_dataloader)
+        t_loss = t_loss/(len(train_dataloader)-n_burn)
         val_loss = 0
+
+
         for u, th in test_dataloader:
-            u, th = u.to(device), th.to(device)
+            u = u-u_mean/u_std
+            th = th-th_mean/th_std
+            th = th[:,1:]
             outputs = model(u)
-            val_Loss = loss_fcn(outputs, th)
+            val_Loss = torch.mean((outputs-th)[:,n_burn:]**2)
             val_loss = val_loss + val_Loss.item()
-        val_loss = val_loss/len(test_dataloader)
+        val_loss = val_loss/(len(test_dataloader)-n_burn)
         
         print("Epoch: %d, Training Loss: %f, Validation Loss: %f" % (epoch+1, t_loss, val_loss))
         epoch_train_loss.append(t_loss)
@@ -155,7 +161,7 @@ def train_noe():
     eval_out =[]
     eval_pred = []
     for u, th in eval_dataloader:
-        u, th = u.to(device), th.to(device)
+        th = th[:,1:]
         eval_out.append(th.detach().numpy())
         print(np.shape(eval_out))
         out = model(u)
@@ -171,7 +177,7 @@ def train_noe():
     plt.plot(eval_pred[:,-1])
     plt.show()
 
-    torch.save(model.state_dict(), 'models/Network_NOE.pth')
+    torch.save(model.state_dict(), 'Network_NOE.pth')
 
 def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs):
     epoch_train_loss = []
@@ -207,7 +213,6 @@ def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs)
     # plt.plot(epoch_val_loss)
     # plt.plot(epoch_train_loss)
     # plt.show()
-
 
 def eval_ann(fname, model_arch, train_dataloader):
     file = os.path.join(MODELS_DIR, fname)
