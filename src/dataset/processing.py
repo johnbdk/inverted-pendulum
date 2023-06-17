@@ -58,8 +58,7 @@ def normalize(dataset):
 
 def split(dataset, percent):
     dataset_size = len(dataset)
-    train_size = int(percent * dataset_size)  # 90% for training
-    print(train_size)
+    train_size = int(percent * dataset_size)  # <percent> for training
     test_size = dataset_size - train_size 
     train_dataset = Subset(dataset, range(train_size))
     test_dataset = Subset(dataset, range(train_size, train_size + test_size))

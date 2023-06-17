@@ -100,23 +100,41 @@ def train_noe():
     # Load dataset
     fname = "training-data.csv"
     dataset_name = os.path.join(DATASET_DIR, fname)
-    dataset = DiskDataset(file = dataset_name, na=80, nb=0, nc=79)
+    dataset = DiskDataset(file = dataset_name, na=40, nb=0, nc=39)
 
-    test_dataset, train_dataset = split(dataset, 0.1)
+    train_dataset, test_dataset = split(dataset, 0.9)
     train_dataloader = DataLoader(train_dataset, batch_size=32)
     test_dataloader = DataLoader(test_dataset, batch_size=32)
     eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
 
     epochs = 10
-    n_burn = 40
+    n_burn = 10
     hidden_size = 32
     input_size = 2
     s_size = 2
     output_size = 1
     model = NOENet(hidden_size, input_size, s_size, output_size)
+
+    # for retraining
     if 0:
         model.load_state_dict(torch.load('Network_NOE.pth'))
+        
+    # For training from sratch:
+    else:
+        state_dict = torch.load('Network_NARX.pth')
+        with torch.no_grad():
+            model.lay1.weight.copy_(state_dict['lay1.weight'])
+            model.lay1.bias.copy_(state_dict['lay1.bias'])
+            model.lay2.weight.copy_(state_dict['lay2.weight'])
+            model.lay2.bias.copy_(state_dict['lay2.bias'])
+
+            model.rlay1.weight.copy_(state_dict['lay1.weight'])
+            model.rlay1.bias.copy_(state_dict['lay1.bias'])
+            model.rlay2.weight.copy_(state_dict['lay2.weight'])
+            model.rlay2.bias.copy_(state_dict['lay2.bias'])
+
     print(model)
+
 
     optimizer = torch.optim.Adam(model.parameters()) 
     loss_fcn = torch.nn.MSELoss()
@@ -124,6 +142,7 @@ def train_noe():
     u_mean, u_std, th_mean, th_std = normalize(train_dataset)
     epoch_train_loss = []
     epoch_val_loss = []
+
     for epoch in range(epochs): 
         t_loss = 0
         for u, th in train_dataloader:
@@ -143,7 +162,6 @@ def train_noe():
             t_loss = t_loss + train_Loss.item()
         t_loss = t_loss/(len(train_dataloader)-n_burn)
         val_loss = 0
-
 
         for u, th in test_dataloader:
             u = u-u_mean/u_std
@@ -243,4 +261,31 @@ def eval_ann(fname, model_arch, train_dataloader):
 
     model.load_state_dict(checkpoint)
     return 1
+
+def eval_noe():
+    # Model
+    hidden_size = 32
+    input_size = 2
+    s_size = 2
+    output_size = 1
+    model = NOENet(hidden_size, input_size, s_size, output_size)
+
+    # Load model
+    model.load_state_dict(torch.load('Network_NOE.pth'))
+
+    # Data
+    fname = "training-data.csv"
+    dataset_name = os.path.join(DATASET_DIR, fname)
+    dataset = DiskDataset(file = dataset_name, na=80, nb=0, nc=79)
+    eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
+
+
+    eval_out =[]
+    eval_pred = []
+    for u, th in eval_dataloader:
+        th = th[:,1:]
+        eval_out.append(th.detach().numpy())
+        out = model(u)
+        eval_pred.append(out.detach().numpy())
+
 
