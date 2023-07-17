@@ -1,35 +1,51 @@
-from rl.env.custom_env import CustomUnbalancedDisk
+from rl.env.custom_env import CustomUnbalancedDisk, Discretizer
+from rl.agent.q_learning import QLearning
+from gym.wrappers import TimeLimit
 import time
+import matplotlib.pyplot as plt
 
 AGENT_TRAIN_FREQ = 1/24
 AGENT_TEST_FREQ = 1/60
 
 class RLManager():
 
-    def __init__(self, method='q_learn') -> None:
+    def __init__(self, 
+                 method='q_learn',
+                 nsteps=1_000_000,
+                 max_episode_steps=2_000, 
+                 nvec=10) -> None:
+        
+        # class attributes
+        self.max_episode_steps = max_episode_steps
+        self.nvec = nvec
+
         # define environment
         self.env = CustomUnbalancedDisk()
+        self.env = TimeLimit(self.env, max_episode_steps=max_episode_steps)
+        self.env = Discretizer(self.env, nvec=nvec)
 
         # define agent
         if method == 'q_learn':
-            self.agent = 0
+            self.agent = QLearning(env=self.env, 
+                                   nsteps=nsteps, 
+                                   callbackfeq=100, 
+                                   alpha=0.2, 
+                                   epsilon=0.2, 
+                                   gamma=0.99)
         elif method == 'actor_critic':
-            self.agent = 1
+            self.agent = 0
         else:
             raise ValueError('Unknown method %s' % method)
         
         # reset environment
         self.init_obs = self.env.reset()
     
-    def train(self, steps=200):
+    def train(self):
         try:
-            for i in range(steps):
-                obs, reward, done, info = self.env.step(self.env.action_space.sample()) #random action
-                print(obs,reward)
-                self.env.render()
-                time.sleep(AGENT_TRAIN_FREQ)
-                if done:
-                    obs = self.env.reset()
+            Qmat, ep_lengths_steps, ep_lengths = self.agent.run()
+            print(ep_lengths_steps, ep_lengths)
+            plt.plot(ep_lengths_steps, self.agent.__class__.roll_mean(ep_lengths, start=self.max_episode_steps),label=str(self.nvec)) #c)
+            plt.show()
         finally: #this will always run
             self.env.close()
             
@@ -39,12 +55,20 @@ class RLManager():
             self.env.render()
             done=False
             while done==False:
+                # pick action according to trained agent
                 # action = argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
-                action = self.env.step(self.env.action_space.sample()) # TODO change this
-                obs, reward, done, info = self.env.step(action)
+                action = self.env.action_space.sample()
+                # action = 3
+
+                # simulation step
+                obs, reward, done, info = self.env.step(action) # TODO change this
                 self.env.render()
+
+                # sleep
                 time.sleep(AGENT_TEST_FREQ)
-                print(obs, reward, action, done, info) #check info on timelimit
-                #check on info['TimeLimit.truncated']
+                
+                # print(obs, reward, action, done, info) #check info on timelimit
         finally:
             self.env.close()
+
+
