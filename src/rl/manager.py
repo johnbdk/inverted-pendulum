@@ -3,8 +3,9 @@ from rl.agent.q_learning import QLearning
 from gym.wrappers import TimeLimit
 import time
 import matplotlib.pyplot as plt
+import numpy as np
 
-AGENT_TRAIN_FREQ = 1/24
+AGENT_TRAIN_FREQ = 1/1
 AGENT_TEST_FREQ = 1/60
 
 class RLManager():
@@ -12,8 +13,8 @@ class RLManager():
     def __init__(self, 
                  method='q_learn',
                  nsteps=1_000_000,
-                 max_episode_steps=2_000, 
-                 nvec=10) -> None:
+                 max_episode_steps=5_000, 
+                 nvec=20) -> None:
         
         # class attributes
         self.max_episode_steps = max_episode_steps
@@ -30,8 +31,12 @@ class RLManager():
                                    nsteps=nsteps, 
                                    callbackfeq=100, 
                                    alpha=0.2, 
-                                   epsilon=0.2, 
-                                   gamma=0.99)
+                                   epsilon_start=0.6,
+                                   epsilon_end=0.4,
+                                   epsilon_decay_steps=0.8*nsteps,
+                                   gamma=0.9,
+                                   train_freq=AGENT_TRAIN_FREQ,
+                                   test_freq=AGENT_TEST_FREQ)
         elif method == 'actor_critic':
             self.agent = 0
         else:
@@ -42,10 +47,9 @@ class RLManager():
     
     def train(self):
         try:
-            Qmat, ep_lengths_steps, ep_lengths = self.agent.run()
-            print(ep_lengths_steps, ep_lengths)
-            plt.plot(ep_lengths_steps, self.agent.__class__.roll_mean(ep_lengths, start=self.max_episode_steps),label=str(self.nvec)) #c)
-            plt.show()
+            # start training loop
+            self.agent.run()
+
         finally: #this will always run
             self.env.close()
             

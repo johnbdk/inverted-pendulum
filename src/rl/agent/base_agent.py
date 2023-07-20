@@ -3,13 +3,29 @@ import numpy as np
 
 
 class BaseAgent(object):
-    def __init__(self, env, nsteps=5000, callbackfeq=100, alpha=0.2, epsilon=0.2, gamma=0.99):
+    def __init__(self, 
+                 env, 
+                 nsteps=5000, 
+                 callbackfeq=100, 
+                 alpha=0.2, 
+                 epsilon_start=1.0,
+                 epsilon_end=0.1,
+                 epsilon_decay_steps=0.9*5000, 
+                 gamma=0.99, 
+                 train_freq=1/24, 
+                 test_freq=1/60):
+        
         self.env = env
         self.nsteps = nsteps
         self.callbackfeq = callbackfeq
         self.alpha = alpha
-        self.epsilon = epsilon
+        self.epsilon_start=epsilon_start
+        self.epsilon = self.epsilon_start
+        self.epsilon_end=epsilon_end
+        self.epsilon_decay_steps=epsilon_decay_steps
         self.gamma = gamma
+        self.train_freq = train_freq
+        self.test_freq = test_freq
 
     def run(self):
         pass

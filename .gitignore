@@ -171,3 +171,6 @@ logs/
 
 .DS_Store
 
+
+# Tensorboard runs
+/runs
