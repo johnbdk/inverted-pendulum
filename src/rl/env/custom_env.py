@@ -1,4 +1,5 @@
 # external imports
+import math
 import numpy as np
 from gym import Wrapper
 from gym.spaces import MultiDiscrete, Discrete
@@ -26,7 +27,6 @@ class Discretizer(Wrapper):
         self.curr_theta = 0
 
         self.complete_steps = 0
-        self.max_complete_steps = 0
 
     def discretize(self,observation): #b)
         return tuple(((observation - self.olow)/(self.ohigh - self.olow)*self.nvec).astype(int)) #b)
@@ -35,48 +35,41 @@ class Discretizer(Wrapper):
 
         # make step in environment
         observation, _, done_timeout, info = self.env.step(action) #b)\
-        
+        print('raw_theta:', observation[0])     
+
         # normalize theta angle to (-pi/pi) range
-        observation[0] = observation[0] % 2*np.pi
-        if observation[0] > np.pi:
-            observation[0] -= 2*np.pi
+        observation[0] = (observation[0] + 2*math.pi) % 2*math.pi
+        if observation[0] > math.pi:
+            observation[0] -= 2*math.pi
         
         theta = observation[0]
         omega = observation[1]
+
+        print('norm_theta:', theta, 'omega:', omega)
 
 
         # discretize theta angle
         observation_discrete = self.discretize(observation)
 
         # calculate done
-        if np.pi - np.abs(observation[0]) <= 0.1:
+        if math.pi - abs(theta) <= 0.2:
             self.complete_steps += 1
         else:
             self.complete_steps = 0
-        self.max_complete_steps = max(self.complete_steps, self.max_complete_steps)
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
         reward = 0
 
-        # encourage angles close to target
-        reward += (1 - np.cos(theta))
-        # reward += -(np.pi - abs(theta))**2
-
-        # encourage large swings (reward high angular velocities
-        # in the direction of the disk's current position)
-        if np.sign(theta) == np.sign(omega):
-            reward += 0.1 * abs(omega)
+        if (math.pi - abs(theta)) <= 0.5:
+            reward = 100 -((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
         else:
-            reward -= 0.1 * abs(omega)
-        
-        # encourage small swings when close to target
-        if abs(theta) > 0.8 * np.pi:
-            reward = -0.5 * abs(omega)
+            reward = 0.1*omega**2 + 0.001*action**2
 
 
         info['observation'] = observation
-        info['max_complete_steps'] = self.max_complete_steps
+        info['complete_steps'] = self.complete_steps
+        info['nvec'] = self.nvec[0]
         return observation_discrete, reward, done, info #b)
 
     def reset(self):

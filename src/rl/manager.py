@@ -5,16 +5,17 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-AGENT_TRAIN_FREQ = 1/1
+# AGENT_TRAIN_FREQ = 1/24
+AGENT_TRAIN_FREQ = 1
 AGENT_TEST_FREQ = 1/60
 
 class RLManager():
 
     def __init__(self, 
                  method='q_learn',
-                 nsteps=1_000_000,
-                 max_episode_steps=5_000, 
-                 nvec=20) -> None:
+                 nsteps=500_000,
+                 max_episode_steps=1_000, 
+                 nvec=15) -> None:
         
         # class attributes
         self.max_episode_steps = max_episode_steps
@@ -28,13 +29,13 @@ class RLManager():
         # define agent
         if method == 'q_learn':
             self.agent = QLearning(env=self.env, 
-                                   nsteps=nsteps, 
+                                   nsteps=nsteps,
                                    callbackfeq=100, 
                                    alpha=0.2, 
-                                   epsilon_start=0.6,
-                                   epsilon_end=0.4,
-                                   epsilon_decay_steps=0.8*nsteps,
-                                   gamma=0.9,
+                                   epsilon_start=0.8,
+                                   epsilon_end=0.1,
+                                   epsilon_decay_steps=0.7*nsteps,
+                                   gamma=0.99,
                                    train_freq=AGENT_TRAIN_FREQ,
                                    test_freq=AGENT_TEST_FREQ)
         elif method == 'actor_critic':

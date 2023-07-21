@@ -66,6 +66,7 @@ class QLearning(BaseAgent):
         temp_theta_min = 0
         temp_theta_max = 0
         temp_ep_q_change = 0
+        temp_ep_max_complete_steps = 0
 
         # initialize environment
         obs = self.env.reset()
@@ -104,6 +105,11 @@ class QLearning(BaseAgent):
             temp_theta_min = min(info['observation'][0], temp_theta_min)
             temp_max_swing = temp_theta_max - temp_theta_min
             temp_ep_theta_error += np.pi - np.abs(info['observation'][0])
+            temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)
+
+            
+            # print('theta', info['observation'][0])
+            # print(temp_theta_min, temp_theta_max, temp_max_swing)
 
             # check for terminating condition
             if done:
@@ -127,10 +133,13 @@ class QLearning(BaseAgent):
                 # save stats
                 temp_ep_max_q = np.max(step_max_q[-env_time._elapsed_steps:])
                 self.tb.add_scalar('Parameters/epsilon', self.epsilon, ep)
+                self.tb.add_scalar('Parameters/alpha', self.alpha, ep)
+                self.tb.add_scalar('Parameters/gamma', self.gamma, ep)
                 self.tb.add_scalar('Practical/ep_length', env_time._elapsed_steps, ep)
                 self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
                 self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
                 self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
+                self.tb.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
                 self.tb.add_scalar('Q-table/new_q_pairs', temp_ep_qpairs, ep)
                 self.tb.add_scalar('Q-table/Max_q', temp_ep_max_q, ep)
                 self.tb.add_scalar('Q-table/cum_updates', temp_ep_q_change, ep)
@@ -143,6 +152,7 @@ class QLearning(BaseAgent):
                 print('max_swing: %.2f' % (temp_max_swing))
                 print('accumulated angle error: %.2f' % (temp_ep_theta_error))
                 print('accumulated q-table updates: %.2f' % (temp_ep_q_change))
+                print('max complete steps: %d' % (temp_ep_max_complete_steps))
                 print('---------------------------')
 
                 # reset stats
@@ -152,6 +162,7 @@ class QLearning(BaseAgent):
                 temp_theta_max = 0
                 temp_ep_theta_error = 0
                 temp_ep_q_change = 0
+                temp_ep_max_complete_steps = 0
 
                 # reset environment
                 obs = self.env.reset()
@@ -164,7 +175,7 @@ class QLearning(BaseAgent):
                 obs = obs_new
 
             # Agent sleep if necessary
-            # time.sleep(self.train_freq)
+            time.sleep(self.train_freq)
 
             # print stats
             # if z % PRINT_FREQ == 0:
