@@ -38,9 +38,10 @@ class Discretizer(Wrapper):
         print('raw_theta:', observation[0])     
 
         # normalize theta angle to (-pi/pi) range
-        observation[0] = (observation[0] + 2*math.pi) % 2*math.pi
-        if observation[0] > math.pi:
-            observation[0] -= 2*math.pi
+        # observation[0] = (observation[0] + 2*math.pi) % 2*math.pi
+        # if observation[0] > math.pi:
+        #     observation[0] -= 2*math.pi
+        observation[0] = observation[0] - (math.ceil((observation[0] + math.pi)/(2*math.pi))-1)*2*math.pi
         
         theta = observation[0]
         omega = observation[1]
