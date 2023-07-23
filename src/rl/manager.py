@@ -13,7 +13,7 @@ class RLManager():
 
     def __init__(self, 
                  method='q_learn',
-                 nsteps=2_000_000,
+                 nsteps=10_000_000,
                  max_episode_steps=1_000,
                  nvec=9) -> None:
         

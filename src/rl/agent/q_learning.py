@@ -1,5 +1,7 @@
 # system imports
 import time
+import pickle
+import os
 
 # external imports
 
@@ -41,7 +43,11 @@ class QLearning(BaseAgent):
         
         # start tensorboard session
         self.tb = SummaryWriter()
+        self.log_dir = self.tb.log_dir
 
+    def save(self, Qmat):
+        with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
+            pickle.dump(Qmat, f)
 
     def run(self):
         # initialize Q-table
@@ -56,6 +62,7 @@ class QLearning(BaseAgent):
         # initialize stats (long term)
         step_max_q = []
         ep = 0
+        action = 0
 
         # initialize temporary stats (short term)
         temp_ep_reward = 0
@@ -67,6 +74,8 @@ class QLearning(BaseAgent):
         temp_theta_max = 0
         temp_ep_q_change = 0
         temp_ep_max_complete_steps = 0
+        temp_ep_actions_taken = []
+        transition_counts = np.zeros((self.env.action_space.n, self.env.action_space.n))
 
         # initialize environment
         obs = self.env.reset()
@@ -78,18 +87,13 @@ class QLearning(BaseAgent):
             self.epsilon = max(self.epsilon_start - s * ((self.epsilon_start - self.epsilon_end) / self.epsilon_decay_steps), self.epsilon_end)
 
             # select action using exploration-exploitation policy
+            prev_action = action
             if np.random.uniform() < self.epsilon: # exploration (random)
                 action = self.env.action_space.sample()
             else: # exploitation (argmax)
                 action = self.__class__.argmax([Qmat[obs,i] for i in range(self.env.action_space.n)])
-
             action = [-3, -1, 0, 1, 3][action]
 
-            # action = [-1, 0, 1][action]
-            # self.action_idx += action
-            # self.action_idx = max(min(self.action_idx, len(self.possible_actions) - 1), 0)
-            # action = self.possible_actions[self.action_idx] # [-3, -1, 0, 1, 3][2] = 0
-            
             # step action in environment
             obs_new, reward, done, info = self.env.step(action)
             self.env.render()
@@ -106,6 +110,8 @@ class QLearning(BaseAgent):
             temp_max_swing = temp_theta_max - temp_theta_min
             temp_ep_theta_error += np.pi - np.abs(info['observation'][0])
             temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)
+            temp_ep_actions_taken.append(action)
+            transition_counts[prev_action, action] += 1
 
             
             # print('theta', info['observation'][0])
@@ -132,11 +138,16 @@ class QLearning(BaseAgent):
    
                 # save stats
                 temp_ep_max_q = np.max(step_max_q[-env_time._elapsed_steps:])
+                transition_probs = transition_counts / transition_counts.sum(axis=1, keepdims=True)
+                transition_probs = (transition_probs - np.min(transition_probs)) / (np.max(transition_probs) - np.min(transition_probs))
+                transition_image = np.repeat(np.expand_dims(transition_probs, axis=0), 3, axis=0)
                 self.tb.add_scalar('Parameters/epsilon', self.epsilon, ep)
                 self.tb.add_scalar('Parameters/alpha', self.alpha, ep)
                 self.tb.add_scalar('Parameters/gamma', self.gamma, ep)
                 self.tb.add_scalar('Parameters/nvec', info['nvec'], ep)
                 self.tb.add_scalar('Practical/ep_length', env_time._elapsed_steps, ep)
+                self.tb.add_histogram('Practical/actions_distribution', np.array(temp_ep_actions_taken), ep)
+                self.tb.add_image('Practical/action_transitions', transition_image, ep)
                 self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
                 self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
                 self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
@@ -164,16 +175,22 @@ class QLearning(BaseAgent):
                 temp_ep_theta_error = 0
                 temp_ep_q_change = 0
                 temp_ep_max_complete_steps = 0
+                temp_ep_actions_taken = []
+                transition_counts = np.zeros((self.env.action_space.n, self.env.action_space.n))
+
+                # save q-table
+                self.save(dict(Qmat))
 
                 # reset environment
                 obs = self.env.reset()
-
 
             else: # not done
                 A = reward + self.gamma*max(Qmat[obs_new, action_next] for action_next in range(self.env.action_space.n)) - Qmat[obs,action]
                 Qmat[obs,action] += self.alpha*A
                 temp_ep_q_change += self.alpha*A
                 obs = obs_new
+
+            self.save(dict(Qmat))
 
             # Agent sleep if necessary
             # time.sleep(self.train_freq)

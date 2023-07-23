@@ -53,9 +53,6 @@ class Discretizer(Wrapper):
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        # reward = -((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
-
-
         if (math.pi - abs(theta)) <= np.pi/3:
             reward = 250 - ((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
         else:
