@@ -135,6 +135,7 @@ class QLearning(BaseAgent):
                 self.tb.add_scalar('Parameters/epsilon', self.epsilon, ep)
                 self.tb.add_scalar('Parameters/alpha', self.alpha, ep)
                 self.tb.add_scalar('Parameters/gamma', self.gamma, ep)
+                self.tb.add_scalar('Parameters/nvec', info['nvec'], ep)
                 self.tb.add_scalar('Practical/ep_length', env_time._elapsed_steps, ep)
                 self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
                 self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
@@ -175,7 +176,7 @@ class QLearning(BaseAgent):
                 obs = obs_new
 
             # Agent sleep if necessary
-            time.sleep(self.train_freq)
+            # time.sleep(self.train_freq)
 
             # print stats
             # if z % PRINT_FREQ == 0:

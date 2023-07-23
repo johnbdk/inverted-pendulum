@@ -35,19 +35,12 @@ class Discretizer(Wrapper):
 
         # make step in environment
         observation, _, done_timeout, info = self.env.step(action) #b)\
-        print('raw_theta:', observation[0])     
 
         # normalize theta angle to (-pi/pi) range
-        # observation[0] = (observation[0] + 2*math.pi) % 2*math.pi
-        # if observation[0] > math.pi:
-        #     observation[0] -= 2*math.pi
         observation[0] = observation[0] - (math.ceil((observation[0] + math.pi)/(2*math.pi))-1)*2*math.pi
         
         theta = observation[0]
         omega = observation[1]
-
-        print('norm_theta:', theta, 'omega:', omega)
-
 
         # discretize theta angle
         observation_discrete = self.discretize(observation)
@@ -60,13 +53,14 @@ class Discretizer(Wrapper):
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        reward = 0
+        # reward = -((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
 
-        if (math.pi - abs(theta)) <= 0.5:
-            reward = 100 -((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
+
+        if (math.pi - abs(theta)) <= np.pi/3:
+            reward = 250 - ((math.pi - abs(theta))**2 + 0.1*omega**2 + 0.001*action**2)
         else:
-            reward = 0.1*omega**2 + 0.001*action**2
-
+            reward = theta**2 + 0.1*omega**2 + 0.001*action**2
+        
 
         info['observation'] = observation
         info['complete_steps'] = self.complete_steps

@@ -13,9 +13,9 @@ class RLManager():
 
     def __init__(self, 
                  method='q_learn',
-                 nsteps=500_000,
-                 max_episode_steps=1_000, 
-                 nvec=15) -> None:
+                 nsteps=2_000_000,
+                 max_episode_steps=1_000,
+                 nvec=9) -> None:
         
         # class attributes
         self.max_episode_steps = max_episode_steps
@@ -30,11 +30,11 @@ class RLManager():
         if method == 'q_learn':
             self.agent = QLearning(env=self.env, 
                                    nsteps=nsteps,
-                                   callbackfeq=100, 
-                                   alpha=0.2, 
-                                   epsilon_start=0.8,
-                                   epsilon_end=0.1,
-                                   epsilon_decay_steps=0.7*nsteps,
+                                   callbackfeq=100,
+                                   alpha=0.2,
+                                   epsilon_start=0.7,
+                                   epsilon_end=0.3,
+                                   epsilon_decay_steps=0.8*nsteps,
                                    gamma=0.99,
                                    train_freq=AGENT_TRAIN_FREQ,
                                    test_freq=AGENT_TEST_FREQ)
