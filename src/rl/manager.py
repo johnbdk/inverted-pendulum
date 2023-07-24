@@ -1,5 +1,6 @@
 from rl.env.custom_env import CustomUnbalancedDisk, Discretizer
 from rl.agent.q_learning import QLearning
+from rl.agent.dqn import DQN
 from gym.wrappers import TimeLimit
 import time
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ class RLManager():
 
     def __init__(self, 
                  method='q_learn',
-                 nsteps=10_000_000,
+                 nsteps=100_000,
                  max_episode_steps=1_000,
                  nvec=9) -> None:
         
@@ -24,7 +25,8 @@ class RLManager():
         # define environment
         self.env = CustomUnbalancedDisk()
         self.env = TimeLimit(self.env, max_episode_steps=max_episode_steps)
-        self.env = Discretizer(self.env, nvec=nvec)
+        if method == 'q_learn':
+            self.env = Discretizer(self.env, nvec=nvec)
 
         # define agent
         if method == 'q_learn':
@@ -38,6 +40,20 @@ class RLManager():
                                    gamma=0.99,
                                    train_freq=AGENT_TRAIN_FREQ,
                                    test_freq=AGENT_TEST_FREQ)
+        elif method == 'dqn':
+             self.agent = DQN(env=self.env, 
+                              nsteps=nsteps,
+                              callbackfeq=100,
+                              alpha=0.1,
+                              epsilon_start=0.9,
+                              epsilon_end=0.1,
+                              epsilon_decay_steps=0.8*nsteps,
+                              gamma=0.99,
+                              train_freq=AGENT_TRAIN_FREQ,
+                              test_freq=AGENT_TEST_FREQ,
+                              buffer_size=5000,
+                              batch_size=128,
+                              target_update_freq=10000)
         elif method == 'actor_critic':
             self.agent = 0
         else:
@@ -54,26 +70,7 @@ class RLManager():
         finally: #this will always run
             self.env.close()
             
+    
+
     def simulate(self):
-        obs = self.env.reset()
-        try:
-            self.env.render()
-            done=False
-            while done==False:
-                # pick action according to trained agent
-                # action = argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
-                action = self.env.action_space.sample()
-                # action = 3
-
-                # simulation step
-                obs, reward, done, info = self.env.step(action) # TODO change this
-                self.env.render()
-
-                # sleep
-                time.sleep(AGENT_TEST_FREQ)
-                
-                # print(obs, reward, action, done, info) #check info on timelimit
-        finally:
-            self.env.close()
-
-
+        self.agent.simulate()

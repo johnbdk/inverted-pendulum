@@ -45,7 +45,7 @@ parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model'
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
-parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'actor_critic'], default='q_learn',
+parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'actor_critic'], default='q_learn',
                            required=False, help='Choose algorithm to determine the agent')
 
 def __main__():

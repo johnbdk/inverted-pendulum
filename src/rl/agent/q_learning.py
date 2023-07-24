@@ -41,15 +41,22 @@ class QLearning(BaseAgent):
                               train_freq=train_freq,
                               test_freq=test_freq)
         
-        # start tensorboard session
-        self.tb = SummaryWriter()
-        self.log_dir = self.tb.log_dir
+        
 
     def save(self, Qmat):
         with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
             pickle.dump(Qmat, f)
 
+    def load(self):
+        with open(os.path.join(self.log_dir, 'q-table.pkl'), 'rb') as f:
+            Qmat = pickle.load(f)
+            return Qmat
+
     def run(self):
+        # start tensorboard session
+        self.tb = SummaryWriter()
+        self.log_dir = self.tb.log_dir
+
         # initialize Q-table
         init_q_value = 0
         Qmat = defaultdict(lambda: init_q_value) # any new argument set to zero
@@ -92,7 +99,6 @@ class QLearning(BaseAgent):
                 action = self.env.action_space.sample()
             else: # exploitation (argmax)
                 action = self.__class__.argmax([Qmat[obs,i] for i in range(self.env.action_space.n)])
-            action = [-3, -1, 0, 1, 3][action]
 
             # step action in environment
             obs_new, reward, done, info = self.env.step(action)
@@ -203,3 +209,31 @@ class QLearning(BaseAgent):
             #     print('[%.0fK/%.0fK] action:%d, reward:%.2f, R_theta:%.2f, R_omega:%.2f, R_throttle:%.2f' % (z/1000, self.nsteps/1000, action, reward, -theta_deviation, -omega_deviation, -throttle_deviation))
 
         return Qmat
+    
+
+    def simulate(self):
+            
+            self.log_dir = os.path.join('runs', 'Jul23_16-23-25_Michalis-Laptop')
+            
+            Qmat = self.load()
+
+            print(Qmat)
+
+            
+
+            obs = self.env.reset()
+            try:
+                self.env.render()
+                done=False
+                while done==False:
+                    # pick action according to trained agent
+                    action = self.__class__.argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
+
+                    # simulation step
+                    obs, reward, done, info = self.env.step(action)
+                    print(f'action:{action}, obs:{info["observation"]}, done:{done}, reward:{reward}')
+                    self.env.render()
+                    # sleep
+                    time.sleep(self.test_freq)
+            finally:
+                self.env.close()
