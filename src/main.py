@@ -5,7 +5,7 @@ import argparse
 
 # Local Relative Imports
 from config.definitions import *
-from ann.model import train_narx, train_noe, eval_ann
+from ann.model import train_narx, train_noe, eval_ann, grid_search
 # from gp.model import PendulumGPManager
 
 ###########  P A R A M E T E R S  ###########
@@ -53,7 +53,10 @@ def __main__():
             pass
         elif args.method == 'ann':
             if args.model_arch == 'narx':
-                train_narx()
+                train_narx(2,2,32)
+            elif args.model_arch == 'narx_grid':
+                train_narx(2,2,32)
+                grid_search()
             elif args.model_arch == 'noe': 
                 train_noe()
             print("Training of the model has been completed")

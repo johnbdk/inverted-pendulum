@@ -16,21 +16,23 @@ class NARXNet(nn.Module):
         return y 
     
 class NOENet(nn.Module): 
-    def __init__(self, hidden_size = 32, u_size = 2, s_size = 2, out_size = 1): 
+    def __init__(self, hidden_size=20, u_size=2, s_size=2, out_size=1): 
         # invoke nn.Module constructor
-        super(NOENet,self).__init__() 
+        super(NOENet, self).__init__() 
         self.u_size = u_size
         self.s_size = s_size
         self.output_size = out_size
         self.hidden_size = hidden_size
 
         self.lay1 = nn.Linear(self.u_size + self.s_size, self.hidden_size)
+        self.lay1_bn = nn.BatchNorm1d(self.hidden_size)  # Batch normalization after the first linear layer
         self.lay2 = nn.Linear(self.hidden_size, 1)
 
         self.rlay1 = nn.Linear(self.u_size + self.s_size, self.hidden_size)
+        self.rlay1_bn = nn.BatchNorm1d(self.hidden_size)  # Batch normalization after the second linear layer
         self.rlay2 = nn.Linear(self.hidden_size, self.s_size)
-        
-        # make it double
+
+        # Make it double
         self.double()
 
     def forward(self, input):
@@ -41,26 +43,21 @@ class NOENet(nn.Module):
         h = torch.zeros(input.shape[0], self.s_size, dtype=torch.float32)
 
         for t in range(input.shape[1]-1):
-
-            # prepare the inputs
+            # Prepare the inputs
             inp = input[:, t:t + self.u_size]
-            # print("input size", np.shape(inp))
-            # print("input", inp)
-
-            inp = torch.cat((inp,h), dim=1).double()
-
-            out = torch.sigmoid((self.lay1(inp)))
+            inp = torch.cat((inp, h), dim=1).double()
+            leaky_relu = torch.nn.LeakyReLU(negative_slope=0.2)  
+            out = leaky_relu(self.lay1_bn(self.lay1(inp)))
             out = self.lay2(out)
-            # out = self.narx_net(inp)
-            h = torch.sigmoid((self.rlay1(inp)))
+            h = leaky_relu(self.rlay1_bn(self.rlay1(inp)))
             h = self.rlay2(h)
-            # h = self.rec_net(inp)
             output.append(out)
         output = torch.stack(output, dim=1)
         output = torch.squeeze(output)
 
         return output
-    
+
+
 # class NOENet(nn.Module): 
 #     def __init__(self, hidden_size = 32, u_size = 2, s_size = 2, out_size = 1): 
 #         # invoke nn.Module constructor
