@@ -13,9 +13,6 @@ from config.definitions import *
 from ann.architectures import NARXNet, NOENet
 from dataset.processing import DiskDataset, split, normalize
 
-
-
-
 def load_model(fname):
     """
     Returns
@@ -41,19 +38,23 @@ def train_narx(na, nb, hidden_nodes):
     dataset_name = os.path.join(DATASET_DIR, fname)
     dataset = DiskDataset(file=dataset_name, na=na, nb=nb)
 
+    # Create dataloaders
     train_dataset, test_dataset = split(dataset, 0.8)
     train_dataloader = DataLoader(train_dataset, batch_size=100, shuffle=False)
     test_dataloader = DataLoader(test_dataset, batch_size=100, shuffle=False)
+    # Evaluation dataloader for the final presentation of results
     eval_dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
+    # Normlization
     u_mean, u_std, th_mean, th_std = normalize(train_dataset)
 
-    epochs = 20
+    epochs = 10
 
+    # Create model with given hyperparameters
     model = NARXNet(na + nb, hidden_nodes)
     print(model)
     optimizer = torch.optim.Adam(model.parameters())
-    
+    loss_fcn = torch.nn.MSELoss()
     def nrms_loss(output, target):
         return torch.sqrt(torch.mean((output - target)**2)) / (torch.max(target) - torch.min(target))
 
@@ -62,24 +63,31 @@ def train_narx(na, nb, hidden_nodes):
     for epoch in range(epochs):
         t_loss = 0
         for u, th in train_dataloader:
+            # Normalize
             u = (u - u_mean) / u_std
             th = (th - th_mean) / th_std
+
             outputs = model(u)
             th_s = torch.squeeze(th)
-            train_Loss = nrms_loss(outputs, th_s)
+            
+            # Calculate loss
+            train_Loss = loss_fcn(outputs, th_s)
             optimizer.zero_grad()
             train_Loss.backward()
             optimizer.step()
             t_loss = t_loss + train_Loss.item()
+
+        # Calculate average loss for training samples
         t_loss = t_loss / len(train_dataloader)
         
+        # Calculate loss for the test dataset
         val_loss = 0
         for u, th in test_dataloader:
             u = (u - u_mean) / u_std
             th = (th - th_mean) / th_std
             outputs = model(u)
             th_s = torch.squeeze(th)
-            val_Loss = nrms_loss(outputs, th_s)
+            val_Loss = loss_fcn(outputs, th_s)
             val_loss = val_loss + val_Loss.item()
         val_loss = val_loss / len(test_dataloader)
 
@@ -90,16 +98,20 @@ def train_narx(na, nb, hidden_nodes):
     eval_out =[]
     eval_pred = []
     for u, th in eval_dataloader:
+        u = (u - u_mean) / u_std
+        th = (th - th_mean) / th_std
         eval_out.append(th.detach().numpy())
         out = model(u)
         eval_pred.append(out.detach().numpy())
 
-    #eval_out = np.reshape(eval_out, [79998, 1])
-    #plt.plot(eval_out)
-    #eval_pred = np.reshape(eval_pred, (79998, 1))
-    #plt.plot(eval_pred)
-    #plt.xlim(0, 8000)
-    #plt.show()
+    eval_out = np.reshape(eval_out, [79998, 1])
+    plt.plot(eval_out[0:100])
+    eval_pred = np.reshape(eval_pred, (79998, 1))
+    plt.plot(eval_pred[0:100])
+    plt.xlim(0, 100)
+    plt.legend(["Actual", "Predicted"])
+    plt.title("Predicted and actual 'th'")
+    plt.show()
 
     torch.save(model.state_dict(), 'Network_NARX.pth')
     #with torch.no_grad():
@@ -142,7 +154,6 @@ def grid_search():
 
     print("Best Hyperparameters: NA=%d, NB=%d, Hidden Nodes=%d, Validation Loss=%.4f" % best_params)
 
-
 def train_noe():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -156,7 +167,7 @@ def train_noe():
     test_dataloader = DataLoader(test_dataset, batch_size=32)
 
 
-    epochs = 1
+    epochs = 15
     n_burn = 10
     hidden_size = 32
     input_size = 2
@@ -185,7 +196,6 @@ def train_noe():
     print(model)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-    
 
     u_mean, u_std, th_mean, th_std = normalize(train_dataset)
     epoch_train_loss = []
@@ -218,68 +228,53 @@ def train_noe():
         print("Epoch: %d, Training Loss: %f, Validation Loss: %f" % (epoch + 1, t_loss, val_loss))
         epoch_train_loss.append(t_loss)
         epoch_val_loss.append(val_loss)
+
     eval_dataloader = DataLoader(dataset, batch_size=dataset.__len__())
     eval_out = []
     eval_pred = []
     for u, th in eval_dataloader:
+        th = th[:,1:]
+        u = u - u_mean / u_std
+        th = th - th_mean / th_std
         eval_out.append(th.detach().numpy())  # Convert eval_out to a PyTorch tensor
         out = model(u)
         eval_pred.append(out.detach().numpy())
-
+        print(np.shape(eval_out))
+        print(np.shape(eval_pred))
+    eval_out = np.squeeze(eval_out)
+    eval_pred = np.squeeze(eval_pred)
     with torch.no_grad():
-        plt.plot(eval_out[0])
-        plt.plot(eval_pred[0],'--')
+        print(np.shape(eval_out))
+        plt.plot(eval_out[:,-1])
+     # eval_pred = np.reshape(eval_pred, (79999,1))
+        plt.plot(eval_pred[:,-1])
         plt.xlabel('k')
         plt.ylabel('y')
-        plt.xlim(0,250)
+        plt.xlim(0,80000)
         plt.legend(['real','predicted'])
         plt.show()
 
-    with torch.no_grad():
-        train_errors = (eval_out - model(u)) ** 2
-        avg_train_errors = torch.mean(train_errors, axis=0) ** 0.5
-        plt.plot(avg_train_errors.numpy())
-        plt.title('Batch Averaged Time-Dependent Error')
-        plt.ylabel('Error')
-        plt.xlabel('i')
-        plt.grid()
-        plt.show()
+    # with torch.no_grad():
+    #     train_errors = (eval_out - model(u)) ** 2
+    #     avg_train_errors = torch.mean(train_errors, axis=0) ** 0.5
+    #     plt.plot(avg_train_errors.numpy())
+    #     plt.title('Batch Averaged Time-Dependent Error')
+    #     plt.ylabel('Error')
+    #     plt.xlabel('i')
+    #     plt.grid()
+    #     plt.show()
 
-    # Plot the error per epoch
-    plt.plot(epoch_train_loss, label='Training Loss')
-    plt.plot(epoch_val_loss, label='Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # # Plot the error per epoch
+    # plt.plot(epoch_train_loss, label='Training Loss')
+    # plt.plot(epoch_val_loss, label='Validation Loss')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
     torch.save(model.state_dict(), 'Network_NOE.pth')
 
-def train(model, train_dataloader, test_dataloader, loss_fcn, optimizer, epochs):
-    epoch_train_loss = []
-    epoch_val_loss = []
-    for epoch in range(epochs): 
-        t_loss = 0
-        for u, th in train_dataloader:
-            outputs = model(u)
-            train_Loss = loss_fcn(outputs, th)
-            # train_Loss = torch.mean((model(batch)-Ytrain)**2) 
-            optimizer.zero_grad() 
-            train_Loss.backward() 
-            optimizer.step()  
-            t_loss = t_loss + train_Loss.item()
-        t_loss = t_loss/len(train_dataloader)
-        val_loss = 0
-        for u, th in test_dataloader:
-            outputs = model(u)
-            val_Loss = loss_fcn(outputs, th)
-            val_loss = val_loss + val_Loss.item()
-        val_loss = val_loss/len(test_dataloader)
-        
-        print("Epoch: %d, Training Loss: %f, Validation Loss: %f" % (epoch+1, t_loss, val_loss))
-        epoch_train_loss.append(t_loss)
-        epoch_val_loss.append(val_Loss)
 
 
     # test_loss = []
