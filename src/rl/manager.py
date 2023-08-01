@@ -85,16 +85,18 @@ class CustomCallback(BaseCallback):
 class RLManager():
 
     def __init__(self,
-                 method='q_learn',
-                 nsteps=500_000,
-                 max_episode_steps=1_000,
-                 env='unbalanced_disk',
-                 nvec=9) -> None:
+                 env : str = 'unbalanced_disk',
+                 method : str ='q_learn',
+                 mode : str ='train',
+                 train_steps : int = 500_000,
+                 test_steps : int = 10_000,
+                 model_path : str | None = None,
+                 ) -> None:
         
         # class attributes
-        self.max_episode_steps = max_episode_steps
-        self.nvec = nvec
-        self.nsteps = nsteps
+        self.mode = mode
+        self.train_steps = train_steps
+        self.test_steps = test_steps
 
         # ----------------- env -----------------
 
@@ -107,12 +109,11 @@ class RLManager():
             raise ValueError('Unknown env %s' % env)
 
         # add time limit
-        if max_episode_steps != 0:
-            self.env = TimeLimit(self.env, max_episode_steps=max_episode_steps)
+        self.env = TimeLimit(self.env, max_episode_steps=1000)
 
         # discretize if necessary
         if method == 'q_learn':
-            self.env = Discretizer(self.env, nvec=nvec)
+            self.env = Discretizer(self.env, nvec=9)
 
         # ---------------- model ----------------
         # define model
@@ -122,7 +123,7 @@ class RLManager():
                                    alpha=0.2,
                                    epsilon_start=1.0,
                                    epsilon_end=0,
-                                   epsilon_decay_steps=0.5*nsteps,
+                                   epsilon_decay_steps=0.5*train_steps,
                                    gamma=0.99,
                                    train_freq=AGENT_TRAIN_FREQ,
                                    test_freq=AGENT_TEST_FREQ)
@@ -132,7 +133,7 @@ class RLManager():
                               alpha=0.001,
                               epsilon_start=0.3,
                               epsilon_end=0.0,
-                              epsilon_decay_steps=0.5*nsteps,
+                              epsilon_decay_steps=0.5*train_steps,
                               gamma=0.99,
                               train_freq=AGENT_TRAIN_FREQ,
                               test_freq=AGENT_TEST_FREQ,
@@ -146,7 +147,7 @@ class RLManager():
                                  gamma=0.99,
                                  exploration_initial_eps=0.5,
                                  exploration_final_eps=0.0,
-                                 exploration_fraction=0.5*nsteps,
+                                 exploration_fraction=0.5*train_steps,
                                  buffer_size=50_000,
                                  learning_starts=5000,
                                  batch_size=64,
@@ -157,18 +158,31 @@ class RLManager():
         else:
             raise ValueError('Unknown method %s' % method)
         
+        # load model
+        if mode == 'test':
+            assert model_path is not None
+            self.model.load(filename=model_path)
+
         # reset environment
         self.init_obs = self.env.reset()
-    
-    def train(self):
-        try:
-            cb = CustomCallback(self.env)
-            # start training loop
-            self.model.learn(total_timesteps=self.nsteps,
-                             callback=cb)
 
-        finally: #this will always run
+    
+    def train(self, render=False):
+        try:
+            # custom callback
+            cb = CustomCallback(self.env)
+
+            # start training loop
+            self.model.learn(total_timesteps=self.train_steps,
+                             callback=cb,
+                             render=render)
+
+        finally:
+            self.model.save()
             self.env.close()
             
     def simulate(self):
-        self.model.simulate(total_timesteps=1000)
+        try:
+            self.model.simulate(total_timesteps=self.test_steps)
+        finally:
+            self.env.close()

@@ -92,8 +92,8 @@ class CustomUnbalancedDisk(UnbalancedDisk):
         # reward = - (math.pi - abs(theta))**2 - 0.01*omega**2 + 0.1*action**2
         
         r_angle = 1.0 * np.cos(np.pi - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
-        r_speed = 0.025 * np.abs(omega) * (np.cos(theta/2)**2 - np.sin(theta/2)**2)     # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
-        r_voltage = -(1/6)*np.abs(action)                                              # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
+        r_speed = 0.025 * np.abs(omega) * np.cos(theta)                                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
+        r_voltage = -(1/6)*np.abs(action)                                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
         reward = r_angle + r_speed + r_voltage                                          # -2.5 (worst) to +2.5 (best)
     
         # r_angle = 1.0 * np.cos(np.pi - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)

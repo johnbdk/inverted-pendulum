@@ -1,6 +1,11 @@
-# imports
-import numpy as np
+# system imports
+import os
+from datetime import datetime
 
+# external imports
+import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+from gym.wrappers.time_limit import TimeLimit
 
 class BaseAgent(object):
     def __init__(self, 
@@ -15,6 +20,12 @@ class BaseAgent(object):
                  test_freq=1/60):
         
         self.env = env
+
+        # pick timelimit environment wrapper to extract elapsed steps
+        self.env_time = self.env
+        while not isinstance(self.env_time, TimeLimit):
+            self.env_time = self.env_time.env
+
         self.callbackfeq = callbackfeq
         self.alpha = alpha
         self.epsilon_start=epsilon_start
@@ -25,12 +36,25 @@ class BaseAgent(object):
         self.train_freq = train_freq
         self.test_freq = test_freq
 
+        # start tensorboard session
+        self.log_dir = os.path.join('runs', self.__class__.__name__ + '_' + datetime.now().isoformat())
+        self.tb = SummaryWriter(log_dir=self.log_dir)
+
+        
     # abstract method for training
-    def learn(self, total_timesteps : int, callback = None):
+    def learn(self, total_timesteps : int, callback = None, render : bool = False):
         pass
 
     # abstract method for predicting action
-    def predict(self, observation):
+    def predict(self, obs, exploration=True):
+        pass
+
+    # abstract method for saving model
+    def save(self):
+        pass
+
+    # abstract method for loading model
+    def load(self):
         pass
 
     # method for testing (override in extended classes if necessary)
@@ -47,18 +71,5 @@ class BaseAgent(object):
         finally:
             self.env.close()
 
-    @staticmethod
-    def argmax(a):
-        # Random argmax
-        a = np.array(a)
-        return np.random.choice(np.arange(len(a), dtype=int)[a == np.max(a)])
+
     
-    @staticmethod
-    def roll_mean(ar, start=2000, N=50): # smoothing if needed
-        s = 1 - 1/N
-        k = start
-        out = np.zeros(ar.shape)
-        for i, a in enumerate(ar):
-            k = s*k + (1-s)*a
-            out[i] = k
-        return out

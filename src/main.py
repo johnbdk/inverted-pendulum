@@ -11,8 +11,6 @@ from rl.manager import RLManager
 
 ###########  P A R A M E T E R S  ###########
 
-
-
 # PARENT PARSER FOR SOME SUBPARSERS TO INHERIT THE ARGUMENTS IN ORDER TO BE SHARED, THUS WE DONT NEED
 # TO SPECIFY EACH SHARED ARGUMENTS TO EACH SEPERATE SUBPARSER
 parent_parser = argparse.ArgumentParser(description = 'put some description here...', add_help=False)
@@ -49,18 +47,24 @@ parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'dqn_buil
                            required=False, help='Choose algorithm to determine the agent model')
 parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'], default='unbalanced_disk',
                            required=False, help='Choose environment to run')
+parser_gp.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
 
 def __main__():
     # Compile Arguments
     args = parser.parse_args()
-    # print(parser.print_help())
-    # print(args)
 
-    if args.train:
-        if args.method == 'gp':
+    # 1. SYSTEM IDENTIFICATION : Gaussian Process Task
+    if args.method == 'gp':
+        if args.train:
             # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
             pass
-        elif args.method == 'ann':
+        elif args.test:
+            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            pass
+
+    # 2. SYSTEM IDENTIFICATION : Artificial Neural Network Task
+    elif args.method == 'ann':
+        if args.train:
             if args.model_arch == 'narx':
                 train_narx(2,2,32)
             elif args.model_arch == 'narx_grid':
@@ -69,22 +73,23 @@ def __main__():
             elif args.model_arch == 'noe': 
                 train_noe()
             print("Training of the model has been completed")
-        elif args.method == 'rl':
-            rlmanager = RLManager(method=args.agent, 
-                                  env=args.env)
-            rlmanager.train()
-    elif args.test:
-        if args.method == 'gp':
-            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
-            pass
-        elif args.method == 'ann':
+        elif args.test:
             if eval_ann(args.mode_path, args.model_arch):
                 print("Evaluation of the model has been completed")
             else:
                 print("Model file does not exists")
-        elif args.method == 'rl':
-            rlmanager = RLManager(method=args.agent, 
+
+    # 3. POLICY LEARNING : Reinforcement Learning
+    elif args.method == 'rl':
+
+        # build manager
+        rlmanager = RLManager(method=args.agent, 
                                   env=args.env)
+        
+        # perform task
+        if args.train:
+            rlmanager.train(render=args.render)
+        elif args.test:
             rlmanager.simulate()
 
 if __name__ == '__main__':
