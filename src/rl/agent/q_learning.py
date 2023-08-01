@@ -19,8 +19,7 @@ PRINT_FREQ = 1000
 
 class QLearning(BaseAgent):
     def __init__(self, 
-                 env, 
-                 nsteps=5000, 
+                 env,
                  callbackfeq=100, 
                  alpha=0.2, 
                  epsilon_start=1.0,
@@ -30,8 +29,7 @@ class QLearning(BaseAgent):
                  train_freq=1/24,
                  test_freq=1/60):
         
-        super(QLearning, self).__init__(env, 
-                              nsteps=nsteps,
+        super(QLearning, self).__init__(env,
                               callbackfeq=callbackfeq, 
                               alpha=alpha, 
                               epsilon_start=epsilon_start,
@@ -41,8 +39,6 @@ class QLearning(BaseAgent):
                               train_freq=train_freq,
                               test_freq=test_freq)
         
-        
-
     def save(self, Qmat):
         with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
             pickle.dump(Qmat, f)
@@ -52,7 +48,7 @@ class QLearning(BaseAgent):
             Qmat = pickle.load(f)
             return Qmat
 
-    def run(self):
+    def learn(self, total_timesteps : int, callback = None):
         # start tensorboard session
         self.tb = SummaryWriter()
         self.log_dir = self.tb.log_dir
@@ -89,7 +85,7 @@ class QLearning(BaseAgent):
         self.env.render()
 
         # train loop
-        for s in range(self.nsteps):
+        for s in range(total_timesteps):
 
             self.epsilon = max(self.epsilon_start - s * ((self.epsilon_start - self.epsilon_end) / self.epsilon_decay_steps), self.epsilon_end)
 
@@ -111,17 +107,13 @@ class QLearning(BaseAgent):
                 step_max_q.append(temp_max_q)
             if Qmat[obs, action] == init_q_value:
                 temp_ep_qpairs += 1
-            temp_theta_max = max(info['observation'][0], temp_theta_max)
-            temp_theta_min = min(info['observation'][0], temp_theta_min)
+            temp_theta_max = max(info['theta_bottom'], temp_theta_max)
+            temp_theta_min = min(info['theta_bottom'], temp_theta_min)
             temp_max_swing = temp_theta_max - temp_theta_min
-            temp_ep_theta_error += np.pi - np.abs(info['observation'][0])
+            temp_ep_theta_error += info['theta_error']
             temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)
             temp_ep_actions_taken.append(action)
             transition_counts[prev_action, action] += 1
-
-            
-            # print('theta', info['observation'][0])
-            # print(temp_theta_min, temp_theta_max, temp_max_swing)
 
             # check for terminating condition
             if done:
@@ -201,25 +193,20 @@ class QLearning(BaseAgent):
             # Agent sleep if necessary
             # time.sleep(self.train_freq)
 
-            # print stats
-            # if z % PRINT_FREQ == 0:
-            #     theta_deviation = info['theta_deviation']
-            #     omega_deviation = info['omega_deviation']
-            #     throttle_deviation = info['throttle_deviation']
-            #     print('[%.0fK/%.0fK] action:%d, reward:%.2f, R_theta:%.2f, R_omega:%.2f, R_throttle:%.2f' % (z/1000, self.nsteps/1000, action, reward, -theta_deviation, -omega_deviation, -throttle_deviation))
-
         return Qmat
     
+
+    # def predict(self, observation):
+        # 
+        # action = self.__class__.argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
+        # pass
+
 
     def simulate(self):
             
             self.log_dir = os.path.join('runs', 'Jul23_16-23-25_Michalis-Laptop')
-            
             Qmat = self.load()
-
             print(Qmat)
-
-            
 
             obs = self.env.reset()
             try:
@@ -231,7 +218,7 @@ class QLearning(BaseAgent):
 
                     # simulation step
                     obs, reward, done, info = self.env.step(action)
-                    print(f'action:{action}, obs:{info["observation"]}, done:{done}, reward:{reward}')
+                    print(f'action:{action}, obs:{obs}, done:{done}, reward:{reward}')
                     self.env.render()
                     # sleep
                     time.sleep(self.test_freq)

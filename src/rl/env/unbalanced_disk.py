@@ -174,7 +174,9 @@ class UnbalancedDisk_sincos(UnbalancedDisk):
         super(UnbalancedDisk_sincos, self).__init__(umax=umax, dt=dt)
         low = [-1,-1,-40.] 
         high = [1,1,40.]
-        self.observation_space = spaces.Box(low=np.array(low,dtype=np.float32),high=np.array(high,dtype=np.float32),shape=(3,))
+        self.observation_space = spaces.Box(low=np.array(low,dtype=np.float32),
+                                            high=np.array(high,dtype=np.float32),
+                                            shape=(3,))
 
     def get_obs(self):
         self.th_noise = self.th + np.random.normal(loc=0,scale=0.001) #do not edit

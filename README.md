@@ -31,3 +31,10 @@ As you can see, on the last example we also specified the model name. This is be
 ```bash
 python main.py gp --sparse --inducing 10 --train
 ```
+
+
+## Reinforcement learning
+
+```bash
+python src/main.py rl --train --agent dqn_built --env unbalanced_disk
+```

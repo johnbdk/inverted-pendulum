@@ -4,19 +4,17 @@ import numpy as np
 
 class BaseAgent(object):
     def __init__(self, 
-                 env, 
-                 nsteps=5000, 
-                 callbackfeq=100, 
-                 alpha=0.2, 
+                 env,
+                 callbackfeq=100,
+                 alpha=0.2,
                  epsilon_start=1.0,
                  epsilon_end=0.1,
-                 epsilon_decay_steps=0.9*5000, 
-                 gamma=0.99, 
-                 train_freq=1/24, 
+                 epsilon_decay_steps=0.9*5000,
+                 gamma=0.99,
+                 train_freq=1/24,
                  test_freq=1/60):
         
         self.env = env
-        self.nsteps = nsteps
         self.callbackfeq = callbackfeq
         self.alpha = alpha
         self.epsilon_start=epsilon_start
@@ -27,8 +25,27 @@ class BaseAgent(object):
         self.train_freq = train_freq
         self.test_freq = test_freq
 
-    def run(self):
+    # abstract method for training
+    def learn(self, total_timesteps : int, callback = None):
         pass
+
+    # abstract method for predicting action
+    def predict(self, observation):
+        pass
+
+    # method for testing (override in extended classes if necessary)
+    def simulate(self, total_timesteps : int):
+        obs = self.env.reset()
+        try:
+            for _ in range(total_timesteps):
+                action, _ = self.predict(obs)
+                obs, reward, done, info = self.env.step(action)
+                self.env.render()
+                self.time.sleep(self.test_freq)
+                if done:
+                    self.env.reset()
+        finally:
+            self.env.close()
 
     @staticmethod
     def argmax(a):

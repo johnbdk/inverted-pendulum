@@ -15,15 +15,14 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state'
 
 
 class QNetwork(nn.Module):
-    def __init__(self, state_size, action_size, seed=42, fc1_units=128, fc2_units=128):
+    def __init__(self, state_size, action_size, seed=42, fc1_units=24, fc2_units=24):
         """Initialize parameters and build model.
         Params
         ======
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
             seed (int): Random seed
-            fc1_units (int): Number of nodes in first hidden layer
-            fc2_units (int): Number of nodes in second hidden layer
+            fc1_units (int): Number of nodes in hidden layer
         """
         super(QNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
@@ -52,8 +51,7 @@ class ReplayBuffer:
 
 class DQN(BaseAgent):
     def __init__(self, 
-                 env, 
-                 nsteps=5000, 
+                 env,
                  callbackfeq=100, 
                  alpha=0.005, 
                  epsilon_start=1.0,
@@ -66,8 +64,7 @@ class DQN(BaseAgent):
                  batch_size=64,
                  target_update_freq=10000):
         
-        super(DQN, self).__init__(env, 
-                              nsteps=nsteps,
+        super(DQN, self).__init__(env,
                               callbackfeq=callbackfeq, 
                               alpha=alpha, 
                               epsilon_start=epsilon_start,
@@ -78,7 +75,6 @@ class DQN(BaseAgent):
                               test_freq=test_freq)
         
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print(self.device)
 
         self.q_network = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n).to(self.device)
         self.target_network = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n).to(self.device)
@@ -94,21 +90,18 @@ class DQN(BaseAgent):
         # start tensorboard session
         self.tb = SummaryWriter()
 
-    def select_action(self, state):
-        if np.random.uniform() < self.epsilon: # exploration
-            return self.env.action_space.sample()
-        else: # exploitation
-            state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-            self.q_network.eval()
+    def predict(self, obs):
+        if np.random.uniform() < self.epsilon:  # exploration
+            action = self.env.action_space.sample()
+        else:  # exploitation
             with torch.no_grad():
-                action_values = self.q_network(state)
-            self.q_network.train()
-
-            return np.argmax(action_values.cpu().data.numpy())
+                state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
+                action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
+        return action
 
     def train(self, replay_buffer):
         # Randomly sample a batch of experiences from the replay buffer
-        batch = random.sample(replay_buffer, self.batch_size)
+        batch = replay_buffer.sample(self.batch_size)
         
         # Unpack the batch
         states, actions, rewards, next_states, dones = zip(*batch)
@@ -120,7 +113,7 @@ class DQN(BaseAgent):
         next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)
         dones = torch.tensor(dones, dtype=torch.bool, device=self.device)
         
-        # Forward pass through the network
+        # Forward pass through the networkx
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
         next_q_values = self.target_network(next_states).max(1)[0].detach()
         
@@ -135,8 +128,10 @@ class DQN(BaseAgent):
         loss.backward()
         self.optimizer.step()
 
+        return loss
 
-    def run(self):
+
+    def learn(self, total_timesteps : int, callback = None):
         obs = self.env.reset()
         self.env.render()
 
@@ -153,21 +148,13 @@ class DQN(BaseAgent):
         temp_theta_min = 0
         temp_theta_max = 0
         temp_ep_max_complete_steps = 0
+        temp_ep_loss = 0
 
-
-        # Initialize the experience replay buffer
-        replay_buffer = []
-
-        for s in range(self.nsteps):
+        for s in range(total_timesteps):
             self.epsilon = max(self.epsilon_start - s * ((self.epsilon_start - self.epsilon_end) / self.epsilon_decay_steps), self.epsilon_end)
 
             # Select action
-            if np.random.uniform() < self.epsilon:  # exploration
-                action = self.env.action_space.sample()
-            else:  # exploitation
-                with torch.no_grad():
-                    state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
-                    action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
+            action = self.predict(obs)
 
             # Take step
             next_obs, reward, done, info = self.env.step(action)
@@ -175,22 +162,19 @@ class DQN(BaseAgent):
 
             # Update stats
             temp_ep_reward += reward
-            temp_theta_max = max(info['observation'][0], temp_theta_max)
-            temp_theta_min = min(info['observation'][0], temp_theta_min)
+            temp_theta_max = max(info['theta_bottom'], temp_theta_max)
+            temp_theta_min = min(info['theta_bottom'], temp_theta_min)
             temp_max_swing = temp_theta_max - temp_theta_min
-            temp_ep_theta_error += np.pi - np.abs(info['observation'][0])
+            temp_ep_theta_error += info['theta_error']
             temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)
 
             # Store transition in replay buffer
-            replay_buffer.append((obs, action, reward, next_obs, done))
-
-            # If replay buffer is full, remove the oldest transition
-            if len(replay_buffer) > self.replay_buffer_size:
-                replay_buffer.pop(0)
+            self.buffer.add(obs, action, reward, next_obs, done)
 
             # Train the model if the replay buffer is large enough
-            if len(replay_buffer) > self.batch_size:
-                self.train(replay_buffer)
+            if len(self.buffer) > self.batch_size:
+                loss_batch = self.train(self.buffer)
+                temp_ep_loss += loss_batch.item()/self.batch_size
 
             # Update statistics
             if done:
@@ -200,11 +184,14 @@ class DQN(BaseAgent):
                 self.tb.add_scalar('Parameters/epsilon', self.epsilon, ep)
                 self.tb.add_scalar('Parameters/alpha', self.alpha, ep)
                 self.tb.add_scalar('Parameters/gamma', self.gamma, ep)
+                self.tb.add_scalar('Parameters/batch_size', self.batch_size, ep)
+                self.tb.add_scalar('Parameters/memory_len', len(self.buffer), ep)
                 self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
                 self.tb.add_scalar('Practical/ep_length', env_time._elapsed_steps, ep)
                 self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
                 self.tb.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
                 self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
+                self.tb.add_scalar('DQN/loss', temp_ep_loss, ep)
 
                 # print statistics
                 print('\n---- Episode %d Completed ----' % (ep))
@@ -222,8 +209,9 @@ class DQN(BaseAgent):
                 temp_ep_theta_error = 0
                 temp_ep_max_complete_steps = 0
                 temp_ep_reward = 0
+                temp_ep_loss = 0
 
-                # Reset the environment and the replay buffer
+                # Reset the environment
                 obs = self.env.reset()
             else:
                 obs = next_obs

@@ -45,8 +45,10 @@ parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model'
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
-parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'actor_critic'], default='q_learn',
-                           required=False, help='Choose algorithm to determine the agent')
+parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'dqn_built', 'actor_critic'], default='q_learn',
+                           required=False, help='Choose algorithm to determine the agent model')
+parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'], default='unbalanced_disk',
+                           required=False, help='Choose environment to run')
 
 def __main__():
     # Compile Arguments
@@ -65,7 +67,8 @@ def __main__():
                 train_noe()
             print("Training of the model has been completed")
         elif args.method == 'rl':
-            rlmanager = RLManager(args.agent)
+            rlmanager = RLManager(method=args.agent, 
+                                  env=args.env)
             rlmanager.train()
     elif args.test:
         if args.method == 'gp':
@@ -77,7 +80,8 @@ def __main__():
             else:
                 print("Model file does not exists")
         elif args.method == 'rl':
-            rlmanager = RLManager(args.agent)
+            rlmanager = RLManager(method=args.agent, 
+                                  env=args.env)
             rlmanager.simulate()
 
 if __name__ == '__main__':
