@@ -44,13 +44,13 @@ parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model'
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
-parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'dqn_built', 'actor_critic'], default='q_learn',
+parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'a2c', 'a2c_built'], default='q_learn',
                            required=False, help='Choose algorithm to determine the agent model')
 parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'], default='unbalanced_disk',
                            required=False, help='Choose environment to run')
 parser_rl.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
 
-parser_rl.add_argument('--load', type=str, default='QLearning_2023-08-02_01-09-54', required=False, help='Path of model to load')
+parser_rl.add_argument('--load', type=str, default='QLearning_Best_0', required=False, help='Path of model to load')
 
 def __main__():
     # Compile Arguments

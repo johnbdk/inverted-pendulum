@@ -8,6 +8,7 @@ from rl.env.custom_unbalanced_disk import CustomUnbalancedDisk, Discretizer
 from rl.env.custom_pendulum import CustomPendulum
 from rl.agent.q_learning import QLearning
 from rl.agent.dqn import DQN
+from rl.agent.a2c import A2C
 from config.rl import (
     TRAIN_STEPS,
     TEST_STEPS,
@@ -99,6 +100,7 @@ class RLManager():
         
         # class attributes
         self.mode = mode
+        self.method = method
         self.train_steps = train_steps
         self.test_steps = test_steps
 
@@ -106,7 +108,10 @@ class RLManager():
 
         # define environment
         if env == 'unbalanced_disk':
-            self.env = CustomUnbalancedDisk()
+            if method == 'a2c':
+                self.env = CustomUnbalancedDisk(action_space_type='continuous')
+            else:
+                self.env = CustomUnbalancedDisk()
         elif env == 'pendulum':
             self.env = CustomPendulum()
         else:
@@ -143,14 +148,27 @@ class RLManager():
                               buffer_size=DQN_PARAMS['buffer_size'],
                               batch_size=DQN_PARAMS['batch_size'],
                               target_update_freq=DQN_PARAMS['target_update_freq'],)
-        elif method == 'actor_critic':
-            self.model = 0
+        elif method == 'a2c':
+            self.model = A2C(env=self.env,
+                             callbackfeq=100,
+                             gamma=ACTOR_CRITIC_PARAMS['gamma'],
+                             learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
+                             alpha_entropy=ACTOR_CRITIC_PARAMS['alpha_entropy'],
+                             alpha_actor=ACTOR_CRITIC_PARAMS['alpha_actor'],
+                             agent_refresh=AGENT_REFRESH)
+        elif method == 'a2c_built':
+            self.model = sb3.A2C(policy="MlpPolicy", 
+                                 env=self.env,
+                                 verbose=1,
+                                 device='cpu'
+            )
         else:
             raise ValueError('Unknown method %s' % method)
         
         # load model
         if mode == 'test':
             assert model_path is not None
+            print('Loading model %s' % model_path)
             self.model.load(filename=model_path)
 
         # reset environment
@@ -163,9 +181,10 @@ class RLManager():
             cb = CustomCallback(self.env)
 
             # start training loop
-            self.model.learn(total_timesteps=self.train_steps,
-                             callback=cb,
-                             render=render)
+            if self.method == 'a2c_built':
+                self.model.learn(total_timesteps=self.train_steps, callback=cb)
+            else:
+                self.model.learn(total_timesteps=self.train_steps, render=render)
         finally:
             self.model.save()
             self.env.close()

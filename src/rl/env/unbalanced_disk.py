@@ -37,8 +37,7 @@ class UnbalancedDisk(gym.Env):
 
         # change anything here (compilable with the exercise instructions)
         self.action_space = spaces.Box(low=-umax,high=umax,shape=tuple()) #continuous
-        # self.action_space = spaces.Discrete(5) #discrete
-        low = [-float('inf'),-40] 
+        low = [-float('inf'),-40]
         high = [float('inf'),40]
         self.observation_space = spaces.Box(low=np.array(low,dtype=np.float32),high=np.array(high,dtype=np.float32),shape=(2,))
 

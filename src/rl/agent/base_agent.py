@@ -13,9 +13,6 @@ class BaseAgent(object):
                  env,
                  callbackfeq=100,
                  alpha=0.2,
-                 epsilon_start=1.0,
-                 epsilon_end=0.1,
-                 epsilon_decay_steps=0.9*5000,
                  gamma=0.99,
                  agent_refresh=1/60):
         
@@ -28,10 +25,7 @@ class BaseAgent(object):
 
         self.callbackfeq = callbackfeq
         self.alpha = alpha
-        self.epsilon_start = epsilon_start
-        self.epsilon = self.epsilon_start
-        self.epsilon_end=epsilon_end
-        self.epsilon_decay_steps=epsilon_decay_steps
+        
         self.gamma = gamma
         self.agent_refresh = agent_refresh
 
@@ -70,7 +64,7 @@ class BaseAgent(object):
         try: # test loop
             for i in range(total_timesteps):
                 # select action
-                action = self.predict(obs)
+                action = self.predict(obs, exploration=False)
 
                 # step action
                 obs, reward, done, info = self.env.step(action)

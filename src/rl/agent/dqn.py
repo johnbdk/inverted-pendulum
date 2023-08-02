@@ -20,7 +20,7 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state'
 
 
 class QNetwork(nn.Module):
-    def __init__(self, state_size, action_size, hidden_layers=[24, 24], seed=42):
+    def __init__(self, state_size, action_size, hidden_layers=[20, 20], seed=42):
         """Initialize parameters and build model.
         Params
         ======
@@ -34,6 +34,7 @@ class QNetwork(nn.Module):
 
         layer_sizes = [state_size] + hidden_layers + [action_size]
         self.fc_layers = nn.ModuleList([nn.Linear(layer_sizes[i], layer_sizes[i + 1]) for i in range(len(layer_sizes) - 1)])
+        print(self.fc_layers)
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
@@ -74,12 +75,10 @@ class DQN(BaseAgent):
         
         super(DQN, self).__init__(env,
                               callbackfeq=callbackfeq, 
-                              alpha=alpha, 
-                              epsilon_start=epsilon_start,
-                              epsilon_end=epsilon_end,
-                              epsilon_decay_steps=epsilon_decay_steps,
+                              alpha=alpha,
                               gamma=gamma,
                               agent_refresh=agent_refresh)
+        
         
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -92,11 +91,17 @@ class DQN(BaseAgent):
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=alpha)
         self.criterion = nn.MSELoss()
         
+        self.epsilon_start = epsilon_start
+        self.epsilon = self.epsilon_start
+        self.epsilon_end=epsilon_end
+        self.epsilon_decay_steps=epsilon_decay_steps
+
         # Initialize ReplayBuffer
         self.replay_buffer_size = buffer_size
         self.buffer = ReplayBuffer(buffer_size)
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
+        self.hidden_layers = hidden_layers
 
 
     def predict(self, obs, exploration=True):
@@ -194,9 +199,6 @@ class DQN(BaseAgent):
             # Terminate episode if done
             if done:
 
-                if ep % SAVE_FREQ == 0:
-                    self.save()
-
                 ep += 1
 
                 # Log statistics
@@ -205,16 +207,21 @@ class DQN(BaseAgent):
                 self.tb.add_scalar('Parameters/gamma', self.gamma, s)
                 self.tb.add_scalar('Parameters/batch_size', self.batch_size, s)
                 self.tb.add_scalar('Parameters/memory_len', len(self.buffer), s)
+                for i, neurons in enumerate(self.hidden_layers):
+                    self.tb.add_scalar('Parameters/hidden_layer_' + str(i), neurons, s)
+
                 self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
                 self.tb.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
                 self.tb.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
                 self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
                 self.tb.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
                 self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
+
                 self.tb.add_scalar('DQN/loss', temp_ep_loss, ep)
 
                 # print statistics
                 print('\n---- Episode %d Completed ----' % (ep))
+                print('steps: %d/%d (%.2f%%)' % (s, total_timesteps, (100*s)/total_timesteps))
                 print('reward: %.2f' % (temp_ep_reward))
                 print('length: %d' % (self.env_time._elapsed_steps))
                 print('max_swing: %.2f' % (temp_max_swing))
@@ -234,6 +241,10 @@ class DQN(BaseAgent):
                 # Reset the environment
                 obs = self.env.reset()
 
+                # save model every few episodes
+                if ep % SAVE_FREQ == 0:
+                    self.save()
+
             else:
                 obs = next_obs
 
@@ -241,6 +252,11 @@ class DQN(BaseAgent):
             if s % self.target_update_freq == 0:
                 self.target_network.load_state_dict(self.q_network.state_dict())
 
+            
+        # force save model at the end
+        self.save()
+        
+        # close summary writer
         self.tb.close()
 
     def save(self):

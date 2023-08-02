@@ -52,17 +52,21 @@ class CustomUnbalancedDisk(UnbalancedDisk):
     Class to override the original UnbalancedDisk Gym Environment.
     """
 
-    def __init__(self):
+    def __init__(self, 
+                 action_space_type='discrete'):
         super(CustomUnbalancedDisk, self).__init__()
 
+        self.action_space_type = action_space_type
+
         # Modify the original action space
-        self.action_space = Discrete(5) #discrete
+        if self.action_space_type == 'discrete':
+            self.action_space = Discrete(5) #discrete
 
         self.complete_steps = 0
-        self.prev_theta = 0
 
     def step(self, action):
-        action = [-3, -1, 0, 1, 3][action]
+        if self.action_space_type == 'discrete':
+            action = [-3, -1, 0, 1, 3][action]
 
         obs, reward, done_timeout, info = super().step(action)
 
@@ -72,7 +76,6 @@ class CustomUnbalancedDisk(UnbalancedDisk):
         theta = obs[0]
         omega = obs[1]
 
-
         # calculate done
         if math.pi - abs(theta) <= 0.2:
             self.complete_steps += 1
@@ -80,39 +83,17 @@ class CustomUnbalancedDisk(UnbalancedDisk):
             self.complete_steps = 0
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
-
         # calculate reward
-        # if (math.pi - abs(theta)) <= np.pi/24:
-        #     reward = 500
-        # elif (math.pi - abs(theta)) <= np.pi/3:
-        #     reward = 100 - ((math.pi - abs(theta))**2 + 0.01*omega**2 + 0.1*action**2)
-        # else:
-        #     reward = theta**2 + 0.01*omega**2 + 0.1*action**2
-
-        # reward = - (math.pi - abs(theta))**2 - 0.01*omega**2 + 0.1*action**2
-        
         r_angle = 1.0 * np.cos(np.pi - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
         r_speed = 0.025 * np.abs(omega) * np.cos(theta)                                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
         r_voltage = -(1/6)*np.abs(action)                                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
         reward = r_angle + r_speed + r_voltage                                          # -2.5 (worst) to +2.5 (best)
-    
-        # r_angle = 1.0 * np.cos(np.pi - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
-        # r_speed = 0.025 * np.abs(omega) * (np.cos(theta/2)**2 - np.sin(theta/2)**2)     # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
-        # r_voltage = (1/6) * action * np.sin(theta) * np.exp(-(omega**2))                # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
-        # reward = r_angle + r_speed + r_voltage                                          # -2.5 (worst) to +2.5 (best)
-
-        # reward = (np.cos(theta - np.pi) + 1.5)**2 - 0.25 \
-        #     + 0.00125 * np.cos((theta + 1)/2)*(omega**2) \
-        #     - 0.01 * action**2
-
 
         info['theta'] = theta
         info['theta_bottom'] = theta
         info['omega'] = omega
         info['complete_steps'] = self.complete_steps
         info['theta_error'] = np.pi - np.abs(info['theta'])
-
-        self.prev_theta = theta
 
         return obs, reward, done, info
 

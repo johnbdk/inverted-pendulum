@@ -27,13 +27,14 @@ class QLearning(BaseAgent):
         
         super(QLearning, self).__init__(env,
                               callbackfeq=callbackfeq, 
-                              alpha=alpha, 
-                              epsilon_start=epsilon_start,
-                              epsilon_end=epsilon_end,
-                              epsilon_decay_steps=epsilon_decay_steps,
+                              alpha=alpha,
                               gamma=gamma,
                               agent_refresh=agent_refresh)
         
+        self.epsilon_start = epsilon_start
+        self.epsilon = self.epsilon_start
+        self.epsilon_end=epsilon_end
+        self.epsilon_decay_steps=epsilon_decay_steps
         
     def save(self):
         with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
@@ -144,6 +145,7 @@ class QLearning(BaseAgent):
                 self.tb.add_scalar('Q-table/cum_updates', temp_ep_q_change, ep)
 
                 # print info
+                print('steps: %d/%d (%.2f%%)' % (s, total_timesteps, (100*s)/total_timesteps))
                 print('reward: %.2f' % (temp_ep_reward))
                 print('length: %d' % (self.env_time._elapsed_steps))
                 print('max_q: %.2f' % (temp_ep_max_q))
@@ -179,26 +181,3 @@ class QLearning(BaseAgent):
 
         return self.Qmat
     
-
-    # def simulate(self):
-            
-    #         self.log_dir = os.path.join('models', 'Jul23_16-23-25_Michalis-Laptop')
-    #         Qmat = self.load()
-    #         print(Qmat)
-
-    #         obs = self.env.reset()
-    #         try:
-    #             self.env.render()
-    #             done=False
-    #             while done==False:
-    #                 # pick action according to trained agent
-    #                 action = self.__class__.argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
-
-    #                 # simulation step
-    #                 obs, reward, done, info = self.env.step(action)
-    #                 print(f'action:{action}, obs:{obs}, done:{done}, reward:{reward}')
-    #                 self.env.render()
-    #                 # sleep
-    #                 time.sleep(self.test_freq)
-    #         finally:
-    #             self.env.close()
