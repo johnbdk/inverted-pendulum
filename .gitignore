@@ -161,8 +161,8 @@ cython_debug/
 # data/
 
 # Ignore models
-models/
-*.pth
+# models/
+# *.pth
 # Ignore logs
 
 logs/
@@ -173,4 +173,4 @@ logs/
 
 
 # Tensorboard runs
-/runs
+/models

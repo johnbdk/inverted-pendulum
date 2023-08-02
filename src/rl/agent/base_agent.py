@@ -1,6 +1,7 @@
 # system imports
 import os
 from datetime import datetime
+import time
 
 # external imports
 import numpy as np
@@ -16,8 +17,7 @@ class BaseAgent(object):
                  epsilon_end=0.1,
                  epsilon_decay_steps=0.9*5000,
                  gamma=0.99,
-                 train_freq=1/24,
-                 test_freq=1/60):
+                 agent_refresh=1/60):
         
         self.env = env
 
@@ -28,16 +28,15 @@ class BaseAgent(object):
 
         self.callbackfeq = callbackfeq
         self.alpha = alpha
-        self.epsilon_start=epsilon_start
+        self.epsilon_start = epsilon_start
         self.epsilon = self.epsilon_start
         self.epsilon_end=epsilon_end
         self.epsilon_decay_steps=epsilon_decay_steps
         self.gamma = gamma
-        self.train_freq = train_freq
-        self.test_freq = test_freq
+        self.agent_refresh = agent_refresh
 
         # start tensorboard session
-        self.log_dir = os.path.join('runs', self.__class__.__name__ + '_' + datetime.now().isoformat())
+        self.log_dir = os.path.join('models', self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         self.tb = SummaryWriter(log_dir=self.log_dir)
 
         
@@ -59,15 +58,46 @@ class BaseAgent(object):
 
     # method for testing (override in extended classes if necessary)
     def simulate(self, total_timesteps : int):
+        
+        # initialize environment
         obs = self.env.reset()
-        try:
-            for _ in range(total_timesteps):
-                action, _ = self.predict(obs)
+
+        # initialize stats
+        ep = 0
+        steps = 0
+        ep_cum_reward = 0
+        
+        try: # test loop
+            for i in range(total_timesteps):
+                # select action
+                action = self.predict(obs)
+
+                # step action
                 obs, reward, done, info = self.env.step(action)
                 self.env.render()
-                self.time.sleep(self.test_freq)
+
+                # sleep
+                time.sleep(self.agent_refresh)
+                
+                # update stats
+                ep_cum_reward += reward
+                steps += 1
+
+                # terminal state
                 if done:
+                    # log stats
+                    self.tb.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+
+                    # reset stats
+                    ep_cum_reward / steps
+                    ep_cum_reward = 0
+
+                    ep += 1
+                    steps = 0
+
+                    # reset environment
                     self.env.reset()
+
         finally:
             self.env.close()
 

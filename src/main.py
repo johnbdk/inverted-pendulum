@@ -8,6 +8,7 @@ from config.definitions import *
 from ann.model import train_narx, train_noe, eval_ann, grid_search
 from rl.manager import RLManager
 # from gp.model import PendulumGPManager
+from config.rl import TRAIN_STEPS, TEST_STEPS
 
 ###########  P A R A M E T E R S  ###########
 
@@ -47,7 +48,9 @@ parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'dqn_buil
                            required=False, help='Choose algorithm to determine the agent model')
 parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'], default='unbalanced_disk',
                            required=False, help='Choose environment to run')
-parser_gp.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
+parser_rl.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
+
+parser_rl.add_argument('--load', type=str, default='QLearning_2023-08-02_01-09-54', required=False, help='Path of model to load')
 
 def __main__():
     # Compile Arguments
@@ -81,16 +84,20 @@ def __main__():
 
     # 3. POLICY LEARNING : Reinforcement Learning
     elif args.method == 'rl':
-
-        # build manager
-        rlmanager = RLManager(method=args.agent, 
-                                  env=args.env)
-        
         # perform task
         if args.train:
-            rlmanager.train(render=args.render)
+            rlm = RLManager(env=args.env,
+                            method=args.agent,
+                            mode='train',
+                            train_steps=TRAIN_STEPS)
+            rlm.train(render=args.render)
         elif args.test:
-            rlmanager.simulate()
+            rlm = RLManager(env=args.env,
+                            method=args.agent,
+                            mode='test',
+                            test_steps=TEST_STEPS,
+                            model_path = args.load)
+            rlm.simulate()
 
 if __name__ == '__main__':
     __main__()

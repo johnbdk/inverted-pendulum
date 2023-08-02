@@ -1,20 +1,24 @@
+# external imports
+from gym.wrappers import TimeLimit
+import stable_baselines3 as sb3
+from stable_baselines3.common.callbacks import BaseCallback
+
+# local imports
 from rl.env.custom_unbalanced_disk import CustomUnbalancedDisk, Discretizer
 from rl.env.custom_pendulum import CustomPendulum
 from rl.agent.q_learning import QLearning
 from rl.agent.dqn import DQN
-from gym.wrappers import TimeLimit
-import time
-import matplotlib.pyplot as plt
-import numpy as np
-import gym
-import stable_baselines3 as sb3
-
-# AGENT_TRAIN_FREQ = 1/24
-AGENT_TRAIN_FREQ = 1
-AGENT_TEST_FREQ = 1/60
-
-
-from stable_baselines3.common.callbacks import BaseCallback
+from config.rl import (
+    TRAIN_STEPS,
+    TEST_STEPS,
+    SAVE_FREQ,
+    AGENT_REFRESH,
+    EPSILON_PARAMS,
+    QLEARN_PARAMS,
+    DQN_PARAMS,
+    ACTOR_CRITIC_PARAMS,
+    MAX_EPISODE_STEPS
+)
 
 class CustomCallback(BaseCallback):
     """
@@ -88,8 +92,8 @@ class RLManager():
                  env : str = 'unbalanced_disk',
                  method : str ='q_learn',
                  mode : str ='train',
-                 train_steps : int = 500_000,
-                 test_steps : int = 10_000,
+                 train_steps : int = TRAIN_STEPS,
+                 test_steps : int = TEST_STEPS,
                  model_path : str | None = None,
                  ) -> None:
         
@@ -109,7 +113,7 @@ class RLManager():
             raise ValueError('Unknown env %s' % env)
 
         # add time limit
-        self.env = TimeLimit(self.env, max_episode_steps=1000)
+        self.env = TimeLimit(self.env, max_episode_steps=MAX_EPISODE_STEPS)
 
         # discretize if necessary
         if method == 'q_learn':
@@ -120,39 +124,25 @@ class RLManager():
         if method == 'q_learn':
             self.model = QLearning(env=self.env,
                                    callbackfeq=100,
-                                   alpha=0.2,
-                                   epsilon_start=1.0,
-                                   epsilon_end=0,
-                                   epsilon_decay_steps=0.5*train_steps,
-                                   gamma=0.99,
-                                   train_freq=AGENT_TRAIN_FREQ,
-                                   test_freq=AGENT_TEST_FREQ)
+                                   alpha=QLEARN_PARAMS['alpha'],
+                                   epsilon_start=EPSILON_PARAMS['epsilon_start'],
+                                   epsilon_end=EPSILON_PARAMS['epsilon_end'],
+                                   epsilon_decay_steps=EPSILON_PARAMS['epsilon_decay_steps'],
+                                   gamma=QLEARN_PARAMS['gamma'],
+                                   agent_refresh=AGENT_REFRESH)
         elif method == 'dqn':
             self.model = DQN(env=self.env,
                               callbackfeq=100,
-                              alpha=0.001,
-                              epsilon_start=0.3,
-                              epsilon_end=0.0,
-                              epsilon_decay_steps=0.5*train_steps,
-                              gamma=0.99,
-                              train_freq=AGENT_TRAIN_FREQ,
-                              test_freq=AGENT_TEST_FREQ,
-                              buffer_size=10000,
-                              batch_size=64,
-                              target_update_freq=10000)
-        elif method == 'dqn_built':
-            self.model = sb3.DQN(policy='MlpPolicy',
-                                 env=self.env,
-                                 learning_rate=0.001,
-                                 gamma=0.99,
-                                 exploration_initial_eps=0.5,
-                                 exploration_final_eps=0.0,
-                                 exploration_fraction=0.5*train_steps,
-                                 buffer_size=50_000,
-                                 learning_starts=5000,
-                                 batch_size=64,
-                                 target_update_interval=10000,
-                                 verbose=1,)
+                              alpha=DQN_PARAMS['learning_rate'],
+                              epsilon_start=EPSILON_PARAMS['epsilon_start'],
+                              epsilon_end=EPSILON_PARAMS['epsilon_end'],
+                              epsilon_decay_steps=EPSILON_PARAMS['epsilon_decay_steps'],
+                              gamma=DQN_PARAMS['gamma'],
+                              agent_refresh=AGENT_REFRESH,
+                              hidden_layers=DQN_PARAMS['hidden_layers'],
+                              buffer_size=DQN_PARAMS['buffer_size'],
+                              batch_size=DQN_PARAMS['batch_size'],
+                              target_update_freq=DQN_PARAMS['target_update_freq'],)
         elif method == 'actor_critic':
             self.model = 0
         else:
@@ -176,7 +166,6 @@ class RLManager():
             self.model.learn(total_timesteps=self.train_steps,
                              callback=cb,
                              render=render)
-
         finally:
             self.model.save()
             self.env.close()

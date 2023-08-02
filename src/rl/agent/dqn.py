@@ -12,6 +12,7 @@ import torch.optim as optim
 
 # local imports
 from rl.agent.base_agent import BaseAgent
+from config.rl import SAVE_FREQ
 
 
 # define experiences namedtuple
@@ -19,7 +20,7 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state'
 
 
 class QNetwork(nn.Module):
-    def __init__(self, state_size, action_size, seed=42, fc1_units=24, fc2_units=24):
+    def __init__(self, state_size, action_size, hidden_layers=[24, 24], seed=42):
         """Initialize parameters and build model.
         Params
         ======
@@ -30,15 +31,16 @@ class QNetwork(nn.Module):
         """
         super(QNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
-        self.fc1 = nn.Linear(state_size, fc1_units)
-        self.fc2 = nn.Linear(fc1_units, fc2_units)
-        self.fc3 = nn.Linear(fc2_units, action_size)
+
+        layer_sizes = [state_size] + hidden_layers + [action_size]
+        self.fc_layers = nn.ModuleList([nn.Linear(layer_sizes[i], layer_sizes[i + 1]) for i in range(len(layer_sizes) - 1)])
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        x = state
+        for layer in self.fc_layers[:-1]:
+            x = F.relu(layer(x))
+        return self.fc_layers[-1](x)
 
 
 class ReplayBuffer:
@@ -64,8 +66,8 @@ class DQN(BaseAgent):
                  epsilon_end=0.1,
                  epsilon_decay_steps=0.9*5000,
                  gamma=0.99,
-                 train_freq=1/24,
-                 test_freq=1/60,
+                 agent_refresh=1/60,
+                 hidden_layers=[24, 24],
                  buffer_size=50000,
                  batch_size=64,
                  target_update_freq=10000):
@@ -77,13 +79,16 @@ class DQN(BaseAgent):
                               epsilon_end=epsilon_end,
                               epsilon_decay_steps=epsilon_decay_steps,
                               gamma=gamma,
-                              train_freq=train_freq,
-                              test_freq=test_freq)
+                              agent_refresh=agent_refresh)
         
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.q_network = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n).to(self.device)
-        self.target_network = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n).to(self.device)
+        self.q_network = QNetwork(state_size=self.env.observation_space.shape[0], 
+                                  action_size=self.env.action_space.n, 
+                                  hidden_layers=hidden_layers).to(self.device)
+        self.target_network = QNetwork(state_size=self.env.observation_space.shape[0], 
+                                       action_size=self.env.action_space.n,
+                                       hidden_layers=hidden_layers).to(self.device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=alpha)
         self.criterion = nn.MSELoss()
         
@@ -103,6 +108,9 @@ class DQN(BaseAgent):
         else:  
             with torch.no_grad():
                 state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
+                # print("1,val {}, shape: {}".format(self.q_network(state_tensor), self.q_network(state_tensor).shape))
+                # print("3,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1], self.q_network(state_tensor).max(1)[1].shape))
+                # print("4,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1].view(1, 1), self.q_network(state_tensor).max(1)[1].view(1, 1).shape))
                 action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
         return action
 
@@ -185,6 +193,10 @@ class DQN(BaseAgent):
 
             # Terminate episode if done
             if done:
+
+                if ep % SAVE_FREQ == 0:
+                    self.save()
+
                 ep += 1
 
                 # Log statistics
@@ -221,6 +233,7 @@ class DQN(BaseAgent):
 
                 # Reset the environment
                 obs = self.env.reset()
+
             else:
                 obs = next_obs
 
@@ -237,8 +250,8 @@ class DQN(BaseAgent):
             # 'optimizer_state_dict': self.optimizer.state_dict(),
         }, f=os.path.join(self.log_dir, 'model.pth'))
 
-    def load_model(self, filename):
-        checkpoint = torch.load(f=os.path.join('runs', filename, 'model.pth'))
+    def load(self, filename):
+        checkpoint = torch.load(f=os.path.join('models', filename, 'model.pth'))
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         # self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
         # self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

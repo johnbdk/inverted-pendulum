@@ -23,8 +23,7 @@ class QLearning(BaseAgent):
                  epsilon_end=0.1,
                  epsilon_decay_steps=0.9*5000,
                  gamma=0.99,
-                 train_freq=1/24,
-                 test_freq=1/60):
+                 agent_refresh=1/60):
         
         super(QLearning, self).__init__(env,
                               callbackfeq=callbackfeq, 
@@ -33,16 +32,15 @@ class QLearning(BaseAgent):
                               epsilon_end=epsilon_end,
                               epsilon_decay_steps=epsilon_decay_steps,
                               gamma=gamma,
-                              train_freq=train_freq,
-                              test_freq=test_freq)
+                              agent_refresh=agent_refresh)
         
         
     def save(self):
         with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
-            pickle.dump(self.Qmat, f)
+            pickle.dump(dict(self.Qmat), f)
 
     def load(self, filename):
-        with open(os.path.join('runs', filename, 'q-table.pkl'), 'rb') as f:
+        with open(os.path.join('models', filename, 'q-table.pkl'), 'rb') as f:
             self.Qmat = pickle.load(f)
     
     def predict(self, obs, exploration=True):
@@ -166,7 +164,7 @@ class QLearning(BaseAgent):
                 temp_ep_max_complete_steps = 0
 
                 # save q-table
-                self.save(dict(self.Qmat))
+                self.save()
 
                 # reset environment
                 obs = self.env.reset()
@@ -177,33 +175,30 @@ class QLearning(BaseAgent):
                 temp_ep_q_change += self.alpha*A
                 obs = obs_new
 
-            self.save(dict(self.Qmat))
-
-            # Agent sleep if necessary
-            # time.sleep(self.train_freq)
+            self.save()
 
         return self.Qmat
     
 
-    def simulate(self):
+    # def simulate(self):
             
-            self.log_dir = os.path.join('runs', 'Jul23_16-23-25_Michalis-Laptop')
-            Qmat = self.load()
-            print(Qmat)
+    #         self.log_dir = os.path.join('models', 'Jul23_16-23-25_Michalis-Laptop')
+    #         Qmat = self.load()
+    #         print(Qmat)
 
-            obs = self.env.reset()
-            try:
-                self.env.render()
-                done=False
-                while done==False:
-                    # pick action according to trained agent
-                    action = self.__class__.argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
+    #         obs = self.env.reset()
+    #         try:
+    #             self.env.render()
+    #             done=False
+    #             while done==False:
+    #                 # pick action according to trained agent
+    #                 action = self.__class__.argmax([Qmat[obs, i] for i in range(self.env.action_space.n)])
 
-                    # simulation step
-                    obs, reward, done, info = self.env.step(action)
-                    print(f'action:{action}, obs:{obs}, done:{done}, reward:{reward}')
-                    self.env.render()
-                    # sleep
-                    time.sleep(self.test_freq)
-            finally:
-                self.env.close()
+    #                 # simulation step
+    #                 obs, reward, done, info = self.env.step(action)
+    #                 print(f'action:{action}, obs:{obs}, done:{done}, reward:{reward}')
+    #                 self.env.render()
+    #                 # sleep
+    #                 time.sleep(self.test_freq)
+    #         finally:
+    #             self.env.close()
