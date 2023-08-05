@@ -15,7 +15,6 @@ from rl.agent.base_agent import BaseAgent
 from config.rl import SAVE_FREQ
 from config.definitions import MODELS_DIR
 
-
 # define experiences namedtuple
 Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state', 'done'])
 
@@ -103,54 +102,6 @@ class DQN(BaseAgent):
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
         self.hidden_layers = hidden_layers
-
-
-    def predict(self, obs, deterministic=False):
-        # exploration
-        if not deterministic and np.random.uniform() < self.epsilon:  # exploration
-            action = self.env.action_space.sample()
-        
-        # exploitation
-        else:  
-            with torch.no_grad():
-                state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
-                # print("1,val {}, shape: {}".format(self.q_network(state_tensor), self.q_network(state_tensor).shape))
-                # print("3,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1], self.q_network(state_tensor).max(1)[1].shape))
-                # print("4,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1].view(1, 1), self.q_network(state_tensor).max(1)[1].view(1, 1).shape))
-                action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
-        return action
-
-    def update(self, replay_buffer):
-        # Randomly sample a batch of experiences from the replay buffer
-        batch = replay_buffer.sample(self.batch_size)
-        
-        # Unpack the batch
-        states, actions, rewards, next_states, dones = zip(*batch)
-        
-        # Convert the data into tensors
-        states = torch.tensor(states, dtype=torch.float32, device=self.device)
-        actions = torch.tensor(actions, dtype=torch.int64, device=self.device)
-        rewards = torch.tensor(rewards, dtype=torch.float32, device=self.device)
-        next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)
-        dones = torch.tensor(dones, dtype=torch.bool, device=self.device)
-        
-        # Forward pass through the networkx
-        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        next_q_values = self.target_network(next_states).max(1)[0].detach()
-        
-        # Compute the target Q-values
-        target_q_values = rewards + (self.gamma * next_q_values * (~dones))
-        
-        # Compute the loss
-        loss = F.mse_loss(current_q_values, target_q_values)
-        
-        # Optimize the model
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        return loss
-
 
     def learn(self, total_timesteps : int, callback = None, render : bool = False):
         # Initialize statistics
@@ -253,13 +204,58 @@ class DQN(BaseAgent):
             if s % self.target_update_freq == 0:
                 self.target_network.load_state_dict(self.q_network.state_dict())
 
-            
         # force save model at the end
         self.save()
         
         # close summary writer
         self.logger.close()
 
+    def predict(self, obs, deterministic=False):
+        # exploration
+        if not deterministic and np.random.uniform() < self.epsilon:  # exploration
+            action = self.env.action_space.sample()
+        
+        # exploitation
+        else:  
+            with torch.no_grad():
+                state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
+                # print("1,val {}, shape: {}".format(self.q_network(state_tensor), self.q_network(state_tensor).shape))
+                # print("3,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1], self.q_network(state_tensor).max(1)[1].shape))
+                # print("4,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1].view(1, 1), self.q_network(state_tensor).max(1)[1].view(1, 1).shape))
+                action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
+        return action
+
+    def update(self, replay_buffer):
+        # Randomly sample a batch of experiences from the replay buffer
+        batch = replay_buffer.sample(self.batch_size)
+        
+        # Unpack the batch
+        states, actions, rewards, next_states, dones = zip(*batch)
+        
+        # Convert the data into tensors
+        states = torch.tensor(states, dtype=torch.float32, device=self.device)
+        actions = torch.tensor(actions, dtype=torch.int64, device=self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32, device=self.device)
+        next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)
+        dones = torch.tensor(dones, dtype=torch.bool, device=self.device)
+        
+        # Forward pass through the networkx
+        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        next_q_values = self.target_network(next_states).max(1)[0].detach()
+        
+        # Compute the target Q-values
+        target_q_values = rewards + (self.gamma * next_q_values * (~dones))
+        
+        # Compute the loss
+        loss = F.mse_loss(current_q_values, target_q_values)
+        
+        # Optimize the model
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return loss
+    
     def save(self, path):
         torch.save({
             'q_network_state_dict': self.q_network.state_dict(),

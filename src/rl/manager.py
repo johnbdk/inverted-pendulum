@@ -13,6 +13,7 @@ from rl.env.custom_pendulum import CustomPendulum
 from rl.agent.q_learning import QLearning
 from rl.agent.dqn import DQN
 from rl.agent.a2c import A2C
+from config.definitions import MODELS_DIR
 from config.rl import (
     TRAIN_STEPS,
     TEST_STEPS,
@@ -26,7 +27,7 @@ from config.rl import (
     STATE_SPACE_MAP,
     ACTION_SPACE_MAP
 )
-from config.definitions import MODELS_DIR
+
 
 class CustomCallback(BaseCallback):
     """
@@ -95,7 +96,6 @@ class CustomCallback(BaseCallback):
 
 
 class RLManager():
-
     def __init__(self,
                  env : str = 'unbalanced_disk',
                  method : str ='q_learn',
@@ -188,7 +188,6 @@ class RLManager():
         # reset environment
         self.init_obs = self.env.reset()
 
-    
     def train(self, render=False):
         try:
             # custom callback
@@ -212,47 +211,47 @@ class RLManager():
             
     def simulate(self):
         try:
-            # self.model.simulate(total_timesteps=self.test_steps)
-            # finally:
-                # self.env.close()
-            
-            # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
-            # initialize environment
-            obs = self.env.reset()
-
-            # initialize stats
-            ep = 0
-            steps = 0
-            ep_cum_reward = 0
-
-            for i in range(self.test_steps):
-                # select action
-                action = self.model.predict(obs, deterministic=True)
-
-                # step action
-                obs, reward, done, info = self.env.step(action[0])
-                self.env.render()
-                
-                # sleep
-                time.sleep(AGENT_REFRESH)
-                
-                # update stats
-                ep_cum_reward += reward
-                steps += 1
-
-                # terminal state
-                if done:
-                    # log stats
-                    # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-
-                    # reset stats
-                    ep_cum_reward / steps
-                    ep_cum_reward = 0
-
-                    ep += 1
-                    steps = 0
-
-                    # reset environment
-                    self.env.reset()
+            self.model.simulate(total_timesteps=self.test_steps)
         finally:
             self.env.close()
+            
+        #     # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
+        #     # initialize environment
+        #     obs = self.env.reset()
+
+        #     # initialize stats
+        #     ep = 0
+        #     steps = 0
+        #     ep_cum_reward = 0
+
+        #     for i in range(self.test_steps):
+        #         # select action
+        #         action = self.model.predict(obs, deterministic=True)
+
+        #         # step action
+        #         obs, reward, done, info = self.env.step(action[0])
+        #         self.env.render()
+                
+        #         # sleep
+        #         time.sleep(AGENT_REFRESH)
+                
+        #         # update stats
+        #         ep_cum_reward += reward
+        #         steps += 1
+
+        #         # terminal state
+        #         if done:
+        #             # log stats
+        #             # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+
+        #             # reset stats
+        #             ep_cum_reward / steps
+        #             ep_cum_reward = 0
+
+        #             ep += 1
+        #             steps = 0
+
+        #             # reset environment
+        #             self.env.reset()
+        # finally:
+        #     self.env.close()

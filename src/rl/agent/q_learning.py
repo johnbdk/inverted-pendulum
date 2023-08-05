@@ -7,7 +7,6 @@ from collections import defaultdict
 # external imports
 import numpy as np
 
-
 # local imports
 from rl.agent.base_agent import BaseAgent
 from config.definitions import MODELS_DIR
@@ -36,25 +35,6 @@ class QLearning(BaseAgent):
         self.epsilon = self.epsilon_start
         self.epsilon_end=epsilon_end
         self.epsilon_decay_steps=epsilon_decay_steps
-        
-    def save(self, path):
-        with open(os.path.join(path, 'q-table.pkl'), 'wb') as f:
-            pickle.dump(dict(self.Qmat), f)
-
-    def load(self, path):
-        with open(os.path.join(MODELS_DIR, path, 'q-table.pkl'), 'rb') as f:
-            self.Qmat = pickle.load(f)
-    
-    def predict(self, obs, deterministic=False):
-        # exploration
-        if not deterministic and np.random.uniform() < self.epsilon: # exploration (random)
-            action = self.env.action_space.sample()
-
-        # exploitation
-        else: 
-            a = np.array([self.Qmat[obs,i] for i in range(self.env.action_space.n)])
-            action = np.random.choice(np.arange(len(a), dtype=int)[a == np.max(a)])
-        return action
 
     def learn(self, total_timesteps : int, callback = None, render : bool = False):
         # initialize Q-table
@@ -182,3 +162,21 @@ class QLearning(BaseAgent):
 
         return self.Qmat
     
+    def predict(self, obs, deterministic=False):
+        # exploration
+        if not deterministic and np.random.uniform() < self.epsilon: # exploration (random)
+            action = self.env.action_space.sample()
+
+        # exploitation
+        else: 
+            a = np.array([self.Qmat[obs,i] for i in range(self.env.action_space.n)])
+            action = np.random.choice(np.arange(len(a), dtype=int)[a == np.max(a)])
+        return action
+    
+    def save(self, path):
+        with open(os.path.join(path, 'q-table.pkl'), 'wb') as f:
+            pickle.dump(dict(self.Qmat), f)
+
+    def load(self, path):
+        with open(os.path.join(MODELS_DIR, path, 'q-table.pkl'), 'rb') as f:
+            self.Qmat = pickle.load(f)

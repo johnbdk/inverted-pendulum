@@ -1,5 +1,6 @@
 # System imports
 import os
+from enum import Enum
 
 # Local imports
 from config import definitions
@@ -18,9 +19,6 @@ BATCH_SIZE = 100
 NA = 2
 NB = 2
 
-
-from enum import Enum
-
 class ModelRepresentation(Enum):
     NARX = 0
     NOE = 1
@@ -29,3 +27,4 @@ class ModelRepresentation(Enum):
 class IdentificationMethod(Enum):
     GP = 0
     NN = 1
+    

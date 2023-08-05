@@ -8,7 +8,6 @@ SAVE_FREQ = 5          # episodes
 
 AGENT_REFRESH = 1/60
 
-
 STATE_SPACE_MAP = {
     'q_learn' : 'discrete',
     'dqn' : 'continuous',
@@ -26,7 +25,7 @@ ACTION_SPACE_MAP = {
 EPSILON_PARAMS = {
     'epsilon_start' : 1.0,
     'epsilon_end' : 0.1,
-    'epsilon_decay_steps' : 0.5 * TRAIN_STEPS,
+    'epsilon_decay_steps' : 0.5*TRAIN_STEPS,
 }
 
 QLEARN_PARAMS = {

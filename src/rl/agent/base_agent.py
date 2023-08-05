@@ -8,6 +8,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from gym.wrappers.time_limit import TimeLimit
 
+# local imports
 from config.definitions import MODELS_DIR
 
 class BaseAgent(object):
@@ -35,7 +36,6 @@ class BaseAgent(object):
         self.log_dir = os.path.join(MODELS_DIR, self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         self.logger = SummaryWriter(log_dir=self.log_dir)
 
-        
     # abstract method for training
     def learn(self, total_timesteps : int, callback = None, render : bool = False):
         pass
@@ -54,7 +54,6 @@ class BaseAgent(object):
 
     # method for testing (override in extended classes if necessary)
     def simulate(self, total_timesteps : int):
-        
         # initialize environment
         obs = self.env.reset()
 
@@ -93,9 +92,5 @@ class BaseAgent(object):
 
                     # reset environment
                     self.env.reset()
-
         finally:
             self.env.close()
-
-
-    
