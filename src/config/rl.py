@@ -8,6 +8,8 @@ SAVE_FREQ = 5          # episodes
 
 AGENT_REFRESH = 1/60
 
+TEST_CALLBACK_FREQ = 100
+
 STATE_SPACE_MAP = {
     'q_learn' : 'discrete',
     'dqn' : 'continuous',
@@ -47,5 +49,5 @@ ACTOR_CRITIC_PARAMS = {
     'gamma' : 0.99,
     'alpha_entropy': 0.5,
     'alpha_actor': 0.5,
-    'batch_size' : 64,
+    'rollout_length': 1000,
 }

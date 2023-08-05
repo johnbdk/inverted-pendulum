@@ -8,15 +8,18 @@ import stable_baselines3 as sb3
 from stable_baselines3.common.callbacks import BaseCallback
 
 # local imports
-from rl.env.custom_unbalanced_disk import CustomUnbalancedDisk, Discretizer
-from rl.env.custom_pendulum import CustomPendulum
+from rl.env.unbalanced_disk.discretizer import Discretizer
+from rl.env.unbalanced_disk.custom_unbalanced_disk import CustomUnbalancedDiskSingle, CustomUnbalancedDiskMulti
+from rl.env.pendulum.custom_pendulum import CustomPendulum
 from rl.agent.q_learning import QLearning
 from rl.agent.dqn import DQN
 from rl.agent.a2c import A2C
+from config.env import NVEC
 from config.definitions import MODELS_DIR
 from config.rl import (
     TRAIN_STEPS,
     TEST_STEPS,
+    TEST_CALLBACK_FREQ,
     SAVE_FREQ,
     AGENT_REFRESH,
     EPSILON_PARAMS,
@@ -98,6 +101,7 @@ class CustomCallback(BaseCallback):
 class RLManager():
     def __init__(self,
                  env : str = 'unbalanced_disk',
+                 task : str = 'single_target',
                  method : str ='q_learn',
                  mode : str ='train',
                  train_steps : int = TRAIN_STEPS,
@@ -106,6 +110,7 @@ class RLManager():
                  ) -> None:
         
         # class attributes
+        self.task = task
         self.mode = mode
         self.method = method
         self.train_steps = train_steps
@@ -115,7 +120,10 @@ class RLManager():
 
         # define environment
         if env == 'unbalanced_disk':
-            self.env = CustomUnbalancedDisk(action_space_type=ACTION_SPACE_MAP[method])
+            if task == 'single_target':
+                self.env = CustomUnbalancedDiskSingle(action_space_type=ACTION_SPACE_MAP[method])
+            else:
+                self.env = CustomUnbalancedDiskMulti()
         elif env == 'pendulum':
             self.env = CustomPendulum()
         else:
@@ -125,15 +133,15 @@ class RLManager():
         self.env = TimeLimit(self.env, max_episode_steps=MAX_EPISODE_STEPS)
 
         # discretize if necessary
-        if STATE_SPACE_MAP[method] == 'discrete':
-            self.env = Discretizer(self.env, nvec=9)
+        if task == 'single_target' and STATE_SPACE_MAP[method] == 'discrete':
+            self.env = Discretizer(self.env, nvec=NVEC)
 
         
         # ---------------- model ----------------
         # define model
         if method == 'q_learn':
             self.model = QLearning(env=self.env,
-                                   callbackfeq=100,
+                                   callbackfeq=TEST_CALLBACK_FREQ,
                                    alpha=QLEARN_PARAMS['alpha'],
                                    epsilon_start=EPSILON_PARAMS['epsilon_start'],
                                    epsilon_end=EPSILON_PARAMS['epsilon_end'],
@@ -142,7 +150,7 @@ class RLManager():
                                    agent_refresh=AGENT_REFRESH)
         elif method == 'dqn':
             self.model = DQN(env=self.env,
-                              callbackfeq=100,
+                              callbackfeq=TEST_CALLBACK_FREQ,
                               alpha=DQN_PARAMS['learning_rate'],
                               epsilon_start=EPSILON_PARAMS['epsilon_start'],
                               epsilon_end=EPSILON_PARAMS['epsilon_end'],
@@ -155,17 +163,18 @@ class RLManager():
                               target_update_freq=DQN_PARAMS['target_update_freq'],)
         elif method == 'a2c':
             self.model = A2C(env=self.env,
-                             callbackfeq=100,
+                             callbackfeq=TEST_CALLBACK_FREQ,
                              gamma=ACTOR_CRITIC_PARAMS['gamma'],
                              learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
                              alpha_entropy=ACTOR_CRITIC_PARAMS['alpha_entropy'],
                              alpha_actor=ACTOR_CRITIC_PARAMS['alpha_actor'],
+                             rollout_length=ACTOR_CRITIC_PARAMS['rollout_length'],
                              agent_refresh=AGENT_REFRESH)
         elif method == 'a2c_built':
             self.model = sb3.A2C(policy="MlpPolicy", 
                                  env=self.env,
                                  learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
-                                 n_steps=ACTOR_CRITIC_PARAMS['batch_size'],
+                                 n_steps=ACTOR_CRITIC_PARAMS['rollout_length'],
                                  gamma=ACTOR_CRITIC_PARAMS['gamma'],
                                  ent_coef=ACTOR_CRITIC_PARAMS['alpha_entropy'],
                                  vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
