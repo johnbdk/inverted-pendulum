@@ -10,7 +10,7 @@ from config import definitions
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(definitions.__file__))))
 DATASET_DIR = os.path.join(ROOT_DIR, "data")
 SRC_DIR = os.path.join(ROOT_DIR, "src")
-MODELS_DIR = os.path.join(ROOT_DIR, "src/models")
+MODELS_DIR = os.path.join(ROOT_DIR, "models")
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 BATCH_SIZE = 100

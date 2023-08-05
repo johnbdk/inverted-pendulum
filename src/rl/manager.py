@@ -1,3 +1,7 @@
+# system imports
+import os
+import time
+
 # external imports
 from gym.wrappers import TimeLimit
 import stable_baselines3 as sb3
@@ -18,8 +22,11 @@ from config.rl import (
     QLEARN_PARAMS,
     DQN_PARAMS,
     ACTOR_CRITIC_PARAMS,
-    MAX_EPISODE_STEPS
+    MAX_EPISODE_STEPS,
+    STATE_SPACE_MAP,
+    ACTION_SPACE_MAP
 )
+from config.definitions import MODELS_DIR
 
 class CustomCallback(BaseCallback):
     """
@@ -108,10 +115,7 @@ class RLManager():
 
         # define environment
         if env == 'unbalanced_disk':
-            if method == 'a2c':
-                self.env = CustomUnbalancedDisk(action_space_type='continuous')
-            else:
-                self.env = CustomUnbalancedDisk()
+            self.env = CustomUnbalancedDisk(action_space_type=ACTION_SPACE_MAP[method])
         elif env == 'pendulum':
             self.env = CustomPendulum()
         else:
@@ -121,9 +125,10 @@ class RLManager():
         self.env = TimeLimit(self.env, max_episode_steps=MAX_EPISODE_STEPS)
 
         # discretize if necessary
-        if method == 'q_learn':
+        if STATE_SPACE_MAP[method] == 'discrete':
             self.env = Discretizer(self.env, nvec=9)
 
+        
         # ---------------- model ----------------
         # define model
         if method == 'q_learn':
@@ -159,7 +164,13 @@ class RLManager():
         elif method == 'a2c_built':
             self.model = sb3.A2C(policy="MlpPolicy", 
                                  env=self.env,
-                                 verbose=1,
+                                 learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
+                                 n_steps=ACTOR_CRITIC_PARAMS['batch_size'],
+                                 gamma=ACTOR_CRITIC_PARAMS['gamma'],
+                                 ent_coef=ACTOR_CRITIC_PARAMS['alpha_entropy'],
+                                 vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
+                                 tensorboard_log=MODELS_DIR,
+                                 verbose=2,
                                  device='cpu'
             )
         else:
@@ -169,7 +180,10 @@ class RLManager():
         if mode == 'test':
             assert model_path is not None
             print('Loading model %s' % model_path)
-            self.model.load(filename=model_path)
+            if method == 'a2c_built':
+                self.model.set_parameters(load_path_or_dict=os.path.join(MODELS_DIR, model_path + '.zip'))
+            else:
+                self.model.load(path=model_path)
 
         # reset environment
         self.init_obs = self.env.reset()
@@ -179,18 +193,66 @@ class RLManager():
         try:
             # custom callback
             cb = CustomCallback(self.env)
-
+            
             # start training loop
             if self.method == 'a2c_built':
                 self.model.learn(total_timesteps=self.train_steps, callback=cb)
             else:
                 self.model.learn(total_timesteps=self.train_steps, render=render)
-        finally:
-            self.model.save()
+        finally: # ALWAYS RUN THIS
+            # save model
+            if self.method == 'a2c_built':
+                log_dir = self.model.logger.get_dir()
+            else:
+                log_dir = self.model.logger.log_dir
+            self.model.save(path=log_dir)
+
+            # close environment
             self.env.close()
             
     def simulate(self):
         try:
-            self.model.simulate(total_timesteps=self.test_steps)
+            # self.model.simulate(total_timesteps=self.test_steps)
+            # finally:
+                # self.env.close()
+            
+            # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
+            # initialize environment
+            obs = self.env.reset()
+
+            # initialize stats
+            ep = 0
+            steps = 0
+            ep_cum_reward = 0
+
+            for i in range(self.test_steps):
+                # select action
+                action = self.model.predict(obs, deterministic=True)
+
+                # step action
+                obs, reward, done, info = self.env.step(action[0])
+                self.env.render()
+                
+                # sleep
+                time.sleep(AGENT_REFRESH)
+                
+                # update stats
+                ep_cum_reward += reward
+                steps += 1
+
+                # terminal state
+                if done:
+                    # log stats
+                    # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+
+                    # reset stats
+                    ep_cum_reward / steps
+                    ep_cum_reward = 0
+
+                    ep += 1
+                    steps = 0
+
+                    # reset environment
+                    self.env.reset()
         finally:
             self.env.close()

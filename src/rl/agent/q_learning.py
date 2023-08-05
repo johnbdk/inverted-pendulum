@@ -10,6 +10,7 @@ import numpy as np
 
 # local imports
 from rl.agent.base_agent import BaseAgent
+from config.definitions import MODELS_DIR
 
 # parameters
 PRINT_FREQ = 1000
@@ -36,17 +37,17 @@ class QLearning(BaseAgent):
         self.epsilon_end=epsilon_end
         self.epsilon_decay_steps=epsilon_decay_steps
         
-    def save(self):
-        with open(os.path.join(self.log_dir, 'q-table.pkl'), 'wb') as f:
+    def save(self, path):
+        with open(os.path.join(path, 'q-table.pkl'), 'wb') as f:
             pickle.dump(dict(self.Qmat), f)
 
-    def load(self, filename):
-        with open(os.path.join('models', filename, 'q-table.pkl'), 'rb') as f:
+    def load(self, path):
+        with open(os.path.join(MODELS_DIR, path, 'q-table.pkl'), 'rb') as f:
             self.Qmat = pickle.load(f)
     
-    def predict(self, obs, exploration=True):
+    def predict(self, obs, deterministic=False):
         # exploration
-        if exploration and np.random.uniform() < self.epsilon: # exploration (random)
+        if not deterministic and np.random.uniform() < self.epsilon: # exploration (random)
             action = self.env.action_space.sample()
 
         # exploitation
@@ -128,21 +129,21 @@ class QLearning(BaseAgent):
    
                 # save stats
                 temp_ep_max_q = np.max(step_max_q[-self.env_time._elapsed_steps:])
-                self.tb.add_scalar('Parameters/epsilon', self.epsilon, s)
-                self.tb.add_scalar('Parameters/alpha', self.alpha, s)
-                self.tb.add_scalar('Parameters/gamma', self.gamma, s)
-                self.tb.add_scalar('Parameters/nvec', info['nvec'], s)
+                self.logger.add_scalar('Parameters/epsilon', self.epsilon, s)
+                self.logger.add_scalar('Parameters/alpha', self.alpha, s)
+                self.logger.add_scalar('Parameters/gamma', self.gamma, s)
+                self.logger.add_scalar('Parameters/nvec', info['nvec'], s)
 
-                self.tb.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
-                self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
-                self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
-                self.tb.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
-                self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
-                self.tb.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
+                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
+                self.logger.add_scalar('Practical/max_swing', temp_max_swing, ep)
+                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
+                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
+                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
+                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
                 
-                self.tb.add_scalar('Q-table/new_q_pairs', temp_ep_qpairs, ep)
-                self.tb.add_scalar('Q-table/Max_q', temp_ep_max_q, ep)
-                self.tb.add_scalar('Q-table/cum_updates', temp_ep_q_change, ep)
+                self.logger.add_scalar('Q-table/new_q_pairs', temp_ep_qpairs, ep)
+                self.logger.add_scalar('Q-table/Max_q', temp_ep_max_q, ep)
+                self.logger.add_scalar('Q-table/cum_updates', temp_ep_q_change, ep)
 
                 # print info
                 print('steps: %d/%d (%.2f%%)' % (s, total_timesteps, (100*s)/total_timesteps))

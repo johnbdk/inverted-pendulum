@@ -11,7 +11,7 @@ import torch.nn.functional as F
 # local imports
 from rl.agent.base_agent import BaseAgent
 from config.rl import SAVE_FREQ
-
+from config.definitions import MODELS_DIR
 
 class Actor(nn.Module):
     def __init__(self, state_size, action_size, hidden_layers=[20, 20]):
@@ -147,17 +147,17 @@ class A2C(BaseAgent):
             if done:
                 ep += 1
                 # Log statistics
-                self.tb.add_scalar('Parameters/alpha', self.alpha, s)
-                self.tb.add_scalar('Parameters/gamma', self.gamma, s)
+                self.logger.add_scalar('Parameters/alpha', self.alpha, s)
+                self.logger.add_scalar('Parameters/gamma', self.gamma, s)
 
-                self.tb.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
-                self.tb.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
-                self.tb.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
-                self.tb.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
-                self.tb.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
-                self.tb.add_scalar('Practical/max_swing', temp_max_swing, ep)
+                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
+                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
+                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
+                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
+                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
+                self.logger.add_scalar('Practical/max_swing', temp_max_swing, ep)
 
-                self.tb.add_scalar('A2C/loss', temp_ep_loss, ep)
+                self.logger.add_scalar('A2C/loss', temp_ep_loss, ep)
 
                 # print statistics
                 print('\n---- Episode %d Completed ----' % (ep))
@@ -187,19 +187,19 @@ class A2C(BaseAgent):
             else:    
                 obs = new_observation
 
-    def predict(self, observation, exploration=True):
+    def predict(self, observation, deterministic=False):
         observation = torch.tensor(observation, dtype=torch.float32).to(self.device)
         mu, sigma = self.actor(observation)
         value = self.critic(observation)
         return mu, sigma, value
 
-    def save(self):
+    def save(self, path=''):
         torch.save({
             'model_state_dict': self.actor.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict()
-        }, f=os.path.join(self.log_dir, 'model.pth'))
+        }, f=os.path.join(path, 'model.pth'))
 
-    def load(self, filename):
-        checkpoint = torch.load(f=os.path.join('models', filename, 'model.pth'))
+    def load(self, path):
+        checkpoint = torch.load(f=os.path.join(MODELS_DIR, path, 'model.pth'))
         self.actor.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

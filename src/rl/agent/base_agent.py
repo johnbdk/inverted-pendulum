@@ -8,6 +8,8 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from gym.wrappers.time_limit import TimeLimit
 
+from config.definitions import MODELS_DIR
+
 class BaseAgent(object):
     def __init__(self, 
                  env,
@@ -30,8 +32,8 @@ class BaseAgent(object):
         self.agent_refresh = agent_refresh
 
         # start tensorboard session
-        self.log_dir = os.path.join('models', self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-        self.tb = SummaryWriter(log_dir=self.log_dir)
+        self.log_dir = os.path.join(MODELS_DIR, self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        self.logger = SummaryWriter(log_dir=self.log_dir)
 
         
     # abstract method for training
@@ -39,11 +41,11 @@ class BaseAgent(object):
         pass
 
     # abstract method for predicting action
-    def predict(self, obs, exploration=True):
+    def predict(self, obs, deterministic=False):
         pass
 
     # abstract method for saving model
-    def save(self):
+    def save(self, path : str):
         pass
 
     # abstract method for loading model
@@ -64,7 +66,7 @@ class BaseAgent(object):
         try: # test loop
             for i in range(total_timesteps):
                 # select action
-                action = self.predict(obs, exploration=False)
+                action = self.predict(obs, deterministic=True)
 
                 # step action
                 obs, reward, done, info = self.env.step(action)
@@ -80,7 +82,7 @@ class BaseAgent(object):
                 # terminal state
                 if done:
                     # log stats
-                    self.tb.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+                    self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
 
                     # reset stats
                     ep_cum_reward / steps

@@ -8,6 +8,21 @@ SAVE_FREQ = 5          # episodes
 
 AGENT_REFRESH = 1/60
 
+
+STATE_SPACE_MAP = {
+    'q_learn' : 'discrete',
+    'dqn' : 'continuous',
+    'a2c' : 'continuous',
+    'a2c_built' : 'continuous'
+}
+
+ACTION_SPACE_MAP = {
+    'q_learn' : 'discrete',
+    'dqn' : 'discrete',
+    'a2c' : 'continuous',
+    'a2c_built' : 'continuous'
+}
+
 EPSILON_PARAMS = {
     'epsilon_start' : 1.0,
     'epsilon_end' : 0.1,
@@ -33,4 +48,5 @@ ACTOR_CRITIC_PARAMS = {
     'gamma' : 0.99,
     'alpha_entropy': 0.5,
     'alpha_actor': 0.5,
+    'batch_size' : 64,
 }
