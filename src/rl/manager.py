@@ -101,41 +101,36 @@ class CustomCallback(BaseCallback):
 class RLManager():
     def __init__(self,
                  env : str = 'unbalanced_disk',
-                 task : str = 'single_target',
                  method : str ='q_learn',
                  mode : str ='train',
-                 train_steps : int = TRAIN_STEPS,
-                 test_steps : int = TEST_STEPS,
+                 multi_target : bool = False,
                  model_path : str | None = None,
                  ) -> None:
         
         # class attributes
-        self.task = task
         self.mode = mode
         self.method = method
-        self.train_steps = train_steps
-        self.test_steps = test_steps
+        self.total_timesteps = TRAIN_STEPS if mode == 'train' else TEST_STEPS
 
         # ----------------- env -----------------
 
         # define environment
         if env == 'unbalanced_disk':
-            if task == 'single_target':
+            if not multi_target or method in ['q_learn', 'dqn']: 
                 self.env = CustomUnbalancedDiskSingle(action_space_type=ACTION_SPACE_MAP[method])
-            else:
+            elif multi_target: # only in A2C
                 self.env = CustomUnbalancedDiskMulti()
         elif env == 'pendulum':
             self.env = CustomPendulum()
         else:
-            raise ValueError('Unknown env %s' % env)
+            raise ValueError('Invalid env configuration %s' % env)
 
         # add time limit
         self.env = TimeLimit(self.env, max_episode_steps=MAX_EPISODE_STEPS)
 
         # discretize if necessary
-        if task == 'single_target' and STATE_SPACE_MAP[method] == 'discrete':
+        if not multi_target and STATE_SPACE_MAP[method] == 'discrete':
             self.env = Discretizer(self.env, nvec=NVEC)
-
         
         # ---------------- model ----------------
         # define model
@@ -179,7 +174,7 @@ class RLManager():
                                  ent_coef=ACTOR_CRITIC_PARAMS['alpha_entropy'],
                                  vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
                                  tensorboard_log=MODELS_DIR,
-                                 verbose=2,
+                                 verbose=1,
                                  device='cpu'
             )
         else:
@@ -204,63 +199,59 @@ class RLManager():
             
             # start training loop
             if self.method == 'a2c_built':
-                self.model.learn(total_timesteps=self.train_steps, callback=cb)
+                self.model.learn(total_timesteps=self.total_timesteps, callback=cb)
             else:
-                self.model.learn(total_timesteps=self.train_steps, render=render)
-        finally: # ALWAYS RUN THIS
+                self.model.learn(total_timesteps=self.total_timesteps, render=render)
+        
+        finally: # Always run this
             # save model
-            if self.method == 'a2c_built':
-                log_dir = self.model.logger.get_dir()
-            else:
-                log_dir = self.model.logger.log_dir
+            log_dir = self.model.logger.get_dir() if self.method == 'a2c_built' else self.model.logger.log_dir
             self.model.save(path=log_dir)
 
             # close environment
             self.env.close()
             
     def simulate(self):
-        try:
-            self.model.simulate(total_timesteps=self.test_steps)
-        finally:
-            self.env.close()
-            
-        #     # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
-        #     # initialize environment
-        #     obs = self.env.reset()
-
-        #     # initialize stats
-        #     ep = 0
-        #     steps = 0
-        #     ep_cum_reward = 0
-
-        #     for i in range(self.test_steps):
-        #         # select action
-        #         action = self.model.predict(obs, deterministic=True)
-
-        #         # step action
-        #         obs, reward, done, info = self.env.step(action[0])
-        #         self.env.render()
-                
-        #         # sleep
-        #         time.sleep(AGENT_REFRESH)
-                
-        #         # update stats
-        #         ep_cum_reward += reward
-        #         steps += 1
-
-        #         # terminal state
-        #         if done:
-        #             # log stats
-        #             # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-
-        #             # reset stats
-        #             ep_cum_reward / steps
-        #             ep_cum_reward = 0
-
-        #             ep += 1
-        #             steps = 0
-
-        #             # reset environment
-        #             self.env.reset()
+        # try:
+        #     self.model.simulate(total_timesteps=self.test_steps)
         # finally:
         #     self.env.close()
+            
+            # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
+            # initialize environment
+            obs = self.env.reset()
+
+            # initialize stats
+            ep = 0
+            steps = 0
+            ep_cum_reward = 0
+
+            for i in range(self.total_timesteps):
+                # select action
+                action = self.model.predict(obs, deterministic=True)
+
+                # step action
+                obs, reward, done, info = self.env.step(action[0])
+                self.env.render()
+                
+                # sleep
+                time.sleep(AGENT_REFRESH)
+                
+                # update stats
+                ep_cum_reward += reward
+                steps += 1
+
+                # terminal state
+                if done:
+                    # log stats
+                    # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+
+                    # reset stats
+                    ep_cum_reward / steps
+                    ep_cum_reward = 0
+
+                    ep += 1
+                    steps = 0
+
+                    # reset environment
+                    self.env.reset()

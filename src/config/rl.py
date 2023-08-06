@@ -50,4 +50,5 @@ ACTOR_CRITIC_PARAMS = {
     'alpha_entropy': 0.5,
     'alpha_actor': 0.5,
     'rollout_length': 1000,
+    'epochs' : 10
 }

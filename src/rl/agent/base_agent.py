@@ -62,35 +62,32 @@ class BaseAgent(object):
         steps = 0
         ep_cum_reward = 0
         
-        try: # test loop
-            for i in range(total_timesteps):
-                # select action
-                action = self.predict(obs, deterministic=True)
+        for i in range(total_timesteps):
+            # select action
+            action = self.predict(obs, deterministic=True)
 
-                # step action
-                obs, reward, done, info = self.env.step(action)
-                self.env.render()
+            # step action
+            obs, reward, done, info = self.env.step(action)
+            self.env.render()
 
-                # sleep
-                time.sleep(self.agent_refresh)
-                
-                # update stats
-                ep_cum_reward += reward
-                steps += 1
+            # sleep
+            time.sleep(self.agent_refresh)
+            
+            # update stats
+            ep_cum_reward += reward
+            steps += 1
 
-                # terminal state
-                if done:
-                    # log stats
-                    self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+            # terminal state
+            if done:
+                # log stats
+                self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
 
-                    # reset stats
-                    ep_cum_reward / steps
-                    ep_cum_reward = 0
+                # reset stats
+                ep_cum_reward / steps
+                ep_cum_reward = 0
 
-                    ep += 1
-                    steps = 0
+                ep += 1
+                steps = 0
 
-                    # reset environment
-                    self.env.reset()
-        finally:
-            self.env.close()
+                # reset environment
+                self.env.reset()

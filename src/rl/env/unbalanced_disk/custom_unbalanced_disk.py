@@ -113,7 +113,6 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
         self.active_target = 0
 
     def step(self, action):
-        
         # step action into environment
         obs, _, done_timeout, info = super().step(action)
 
@@ -130,10 +129,10 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        r_angle = 1.0 * np.cos(np.pi + target_dev - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
-        r_speed = 0.025 * np.abs(omega) * np.cos(theta)                                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
-        r_voltage = -(1/6)*np.abs(action)                                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
-        reward = r_angle + r_speed + r_voltage                                          # -2.5 (worst) to +2.5 (best)
+        r_angle = 1.0 * np.cos(np.pi + target_dev - theta)              # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
+        r_speed = 0.025 * np.abs(omega) * np.cos(theta)                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
+        r_voltage = -(1/6)*np.abs(action)                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
+        reward = r_angle + r_speed + r_voltage                          # -2.5 (worst) to +2.5 (best)
 
         # append info stats
         info['theta'] = theta
@@ -156,3 +155,4 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
 
     def render(self, mode='human'):
         return super().render(mode)
+    

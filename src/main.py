@@ -48,8 +48,8 @@ parser_rl.add_argument('--agent', type=str, choices=['q_learn', 'dqn', 'a2c', 'a
                            required=False, help='Choose algorithm to determine the agent model')
 parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'], default='unbalanced_disk',
                            required=False, help='Choose environment to run')
-parser_rl.add_argument('--task', type=str, choices=['single_target', 'multi_target'], default='single_target',
-                           required=False, help='Choose environment with single or multiple targets (applies to the unbalanced disk env only!)')
+parser_rl.add_argument('--multi_target', action='store_true', default=False, 
+                       help='Choose environment with single or multiple targets (applies to the unbalanced disk env only!)')
 parser_rl.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
 
 parser_rl.add_argument('--load', type=str, default='QLearning_Best_0', required=False, help='Path of model to load')
@@ -89,17 +89,15 @@ def __main__():
         # perform task
         if args.train:
             rlm = RLManager(env=args.env,
-                            task=args.task,
                             method=args.agent,
                             mode='train',
-                            train_steps=TRAIN_STEPS)
+                            multi_target=args.multi_target)
             rlm.train(render=args.render)
         elif args.test:
             rlm = RLManager(env=args.env,
-                            task=args.task,
                             method=args.agent,
                             mode='test',
-                            test_steps=TEST_STEPS,
+                            multi_target=args.multi_target,
                             model_path = args.load)
             rlm.simulate()
 

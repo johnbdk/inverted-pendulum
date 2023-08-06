@@ -10,9 +10,10 @@ import torch.nn.functional as F
 
 # local imports
 from rl.agent.base_agent import BaseAgent
-from config.rl import SAVE_FREQ
+from config.rl import SAVE_FREQ, ACTOR_CRITIC_PARAMS
 from config.definitions import MODELS_DIR
 
+EPOCHS = ACTOR_CRITIC_PARAMS['epochs']
 
 class RolloutBuffer:
     def __init__(self):
@@ -21,20 +22,21 @@ class RolloutBuffer:
         self.new_observations = []
         self.rewards = []
         self.dones = []
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def store(self, observation, action, new_observation, reward, done):
         self.observations.append(observation)
-        self.observations.append(action)
-        self.observations.append(new_observation)
+        self.actions.append(action)
+        self.new_observations.append(new_observation)
         self.rewards.append(reward)
         self.dones.append(done)
 
     def get(self):
-        convert = lambda x: [torch.tensor(xi, dtype=torch.float32) for xi in x]
+        convert = lambda x: [torch.from_numpy(np.array(xi)).to(torch.device(self.device), dtype=torch.float32) for xi in x]
         obs, actions, new_obs, rewards, dones = convert([self.observations, self.actions, self.new_observations, self.rewards, self.dones])
         return obs, actions, new_obs, rewards, dones
 
-    def reset(self):
+    def clear(self):
         self.observations = []
         self.actions = []
         self.new_observations = []
@@ -43,6 +45,20 @@ class RolloutBuffer:
 
     def __len__(self):
         return len(self.observations)
+    
+    def __repr__(self):
+        obs, actions, new_obs, rewards, dones = self.get()
+        repr_str = ("[BUFFER] : Observations: type:{}, shape:{}\n"
+                    "[BUFFER] : Actions: type:{}, shape:{}\n"
+                    "[BUFFER] : New observations: type:{}, shape:{}\n"
+                    "[BUFFER] : Rewards: type:{}, shape:{}\n"
+                    "[BUFFER] : Dones: type:{}, shape:{}").format(
+                        type(obs), obs.shape,
+                        type(actions), actions.shape,
+                        type(new_obs), new_obs.shape,
+                        type(rewards), rewards.shape,
+                        type(dones), dones.shape)
+        return repr_str
 
 class Actor(nn.Module):
     def __init__(self, state_size, action_size, hidden_layers=[20, 20]):
@@ -66,7 +82,6 @@ class Actor(nn.Module):
         mu = self.mu(x)
         sigma = F.softplus(self.sigma(x))
         return mu, sigma
-
 
 class Critic(nn.Module):
     def __init__(self, state_size, hidden_layers=[20, 20]):
@@ -116,12 +131,9 @@ class A2C(BaseAgent):
 
         # other params
         self.rollout_length = rollout_length
+        self.rb = RolloutBuffer()
 
-    def rollout(self, total_timesteps: int, render : bool = False):
-        
-        # Initialize buffer
-        buffer = RolloutBuffer()
-        
+    def rollout(self, curr_timesteps : int, curr_episodes: int, render : bool = False):
         # Initialize statistics
         temp_ep_reward = 0
         temp_ep_theta_error = 0
@@ -131,12 +143,9 @@ class A2C(BaseAgent):
         temp_ep_max_complete_steps = 0
 
         with torch.no_grad():
-            # Initialize environment
-            obs = self.env.reset()
-            if render:
-                self.env.render()
+            
 
-            for t in range(self.rollout_length):
+            for running_step in range(self.rollout_length):
                 # predict action probabilities and value
                 mu, sigma, _ = self.predict(obs)
 
@@ -152,13 +161,14 @@ class A2C(BaseAgent):
                     self.env.render()
 
                 terminal = done and not info.get('TimeLimit.truncated', False)
+                
                 # store experiences in rollout buffer
-                buffer.store(observation=obs, 
-                             action=action, 
+                self.rb.store(observation=obs, 
+                             action=action.item(), 
                              new_observation=new_obs, 
                              reward=reward, 
                              done=terminal)
-
+                
                 # Update stats
                 temp_ep_reward += reward
                 temp_theta_max = max(info['theta_bottom'], temp_theta_max)
@@ -168,21 +178,21 @@ class A2C(BaseAgent):
                 temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)
 
                 if done:
-                    ep += 1
+                    curr_episodes += 1
                     # Log statistics
-                    self.logger.add_scalar('Parameters/alpha', self.alpha, s)
-                    self.logger.add_scalar('Parameters/gamma', self.gamma, s)
+                    self.logger.add_scalar('Parameters/alpha', self.alpha, curr_timesteps)
+                    self.logger.add_scalar('Parameters/gamma', self.gamma, curr_timesteps)
 
-                    self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
-                    self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
-                    self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
-                    self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
-                    self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
-                    self.logger.add_scalar('Practical/max_swing', temp_max_swing, ep)
+                    self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, curr_episodes)
+                    self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, curr_episodes)
+                    self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, curr_episodes)
+                    self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, curr_episodes)
+                    self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, curr_episodes)
+                    self.logger.add_scalar('Practical/max_swing', temp_max_swing, curr_episodes)
 
                     # print statistics
-                    print('\n---- Episode %d Completed ----' % (ep))
-                    print('steps: %d/%d (%.2f%%)' % (s, total_timesteps, (100*s)/total_timesteps))
+                    print('\n---- Episode %d Completed ----' % (curr_episodes))
+                    print('steps: %d/%d (%.2f%%)' % (curr_timesteps, self.total_timesteps, (100*curr_timesteps)/self.total_timesteps))
                     print('reward: %.2f' % (temp_ep_reward))
                     print('length: %d' % (self.env_time._elapsed_steps))
                     print('max_swing: %.2f' % (temp_max_swing))
@@ -202,36 +212,34 @@ class A2C(BaseAgent):
                     obs = self.env.reset()
 
                     # save model every few episodes
-                    if ep % SAVE_FREQ == 0:
+                    if curr_episodes % SAVE_FREQ == 0:
                         self.save()
 
                     # stop accumulating experiences in this rollout
-                    s += t
-                    r += 1
+                    curr_timesteps += running_step
                     break
                 else:
                     obs = new_obs
-        return t
+        return curr_timesteps, curr_episodes
                     
     def learn(self, total_timesteps: int, callback=None, render: bool=False):
+        # initialize counters
+        self.total_timesteps = total_timesteps
+        curr_episodes = 0; curr_timesteps = 0
+
         # Initialize environment
         obs = self.env.reset()
         if render:
             self.env.render()
 
-        # initialize rollout buffer memory to store experiences
-        buffer = RolloutBuffer()
-
-        # counters
-        ep = 0; r = 0; s = 0
-
         # train loop
-        while s <= total_timesteps:
-            # collect experience and store to buffer
-            self.rollout(total_timesteps)
+        for epoch in range(EPOCHS):
+            
+            # retrieve experiences
+            curr_timesteps, curr_episodes = self.rollout(curr_timesteps, curr_episodes, render=render)
             
             # get experiences from buffer
-            observations, actions, new_observations, rewards, dones = buffer.get()
+            buffer_obs, buffer_actions, buffer_new_obs, buffer_rewards, buffer_dones = self.rb.get()
 
             # calculate returns
             G = 0
@@ -239,30 +247,31 @@ class A2C(BaseAgent):
             critic_losses = []
             entropy_losses = []
             
-            for t in reversed(range(len(buffer) - 1)):
+            for t in reversed(range(len(self.rb) - 1)):
                 # calculate advantage
-                G = rewards[t] + self.gamma * (1 - dones[t]) * G
-                _, _, value_t = self.predict(observations[t])
+                G = buffer_rewards[t] + self.gamma * (1 - buffer_dones[t]) * G
+                mu_t, sigma_t, value_t = self.predict(buffer_obs[t])
                 advantage = G - value_t.detach()
 
+                # create distribution
+                dist = torch.distributions.Normal(mu_t, sigma_t)
+
+                # calculate log probability
+                log_prob_t = dist.log_prob(buffer_actions[t])
+                
+                # calculate entropy
+                entropy_t = dist.entropy()
+
                 # calculate losses
-                actor_loss = -(log_probs[t] * advantage.detach()).mean()
+                actor_loss = -(log_prob_t * advantage.detach()).mean()
                 critic_loss = advantage.pow(2).mean()
-                entropy_loss = entropies[t]
+                entropy_loss = entropy_t
 
                 # append losses
                 actor_losses.append(actor_loss)
                 critic_losses.append(critic_loss)
                 entropy_losses.append(entropy_loss)
-
-            # ----- OLD -----
-            # calculate advantage and actor and critic losses
-            # advantage = reward + (1 - done) * self.gamma * new_value.detach() - value.detach()
-            # actor_loss = -(log_prob * advantage.detach()).mean()
-            # critic_loss = advantage.pow(2).mean()
-            # loss = sum(critic_loss) + self.alpha_actor * actor_loss + self.alpha_entropy * entropy_loss
-
-
+            
             # total loss
             loss = sum(critic_losses) + self.alpha_actor * sum(actor_losses) + self.alpha_entropy * sum(entropy_losses)
 
@@ -271,11 +280,12 @@ class A2C(BaseAgent):
             loss.backward()
             self.optimizer.step()
 
-            # reset rollout buffer
-            buffer.reset()
+        # clear rollout buffer
+        self.rb.clear()
 
     def predict(self, observation, deterministic=False):
-        observation = torch.tensor(observation, dtype=torch.float32).to(self.device)
+        if not torch.is_tensor(observation):
+            observation = torch.tensor(observation, dtype=torch.float32).to(self.device, dtype=torch.float32)
         mu, sigma = self.actor(observation)
         value = self.critic(observation)
         return mu, sigma, value
