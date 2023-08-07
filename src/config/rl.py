@@ -1,5 +1,6 @@
 # General Parameters
 TRAIN_STEPS = 500_000
+
 TEST_STEPS = 10_000
 
 MAX_EPISODE_STEPS = 1000
@@ -49,6 +50,6 @@ ACTOR_CRITIC_PARAMS = {
     'gamma' : 0.99,
     'alpha_entropy': 0.5,
     'alpha_actor': 0.5,
-    'rollout_length': 1000,
+    'rollout_length': 64,
     'epochs' : 10
 }

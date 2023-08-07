@@ -4,8 +4,8 @@ import time
 
 # external imports
 from gym.wrappers import TimeLimit
-import stable_baselines3 as sb3
-from stable_baselines3.common.callbacks import BaseCallback
+from torch import nn
+from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike
 
 # local imports
 from rl.env.unbalanced_disk.discretizer import Discretizer
@@ -14,6 +14,7 @@ from rl.env.pendulum.custom_pendulum import CustomPendulum
 from rl.agent.q_learning import QLearning
 from rl.agent.dqn import DQN
 from rl.agent.a2c import A2C
+from rl.agent.a2c_built import A2CBuilt
 from config.env import NVEC
 from config.definitions import MODELS_DIR
 from config.rl import (
@@ -30,72 +31,6 @@ from config.rl import (
     STATE_SPACE_MAP,
     ACTION_SPACE_MAP
 )
-
-
-class CustomCallback(BaseCallback):
-    """
-    A custom callback that derives from ``BaseCallback``.
-
-    :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
-    """
-    def __init__(self, env, verbose=0):
-        super(CustomCallback, self).__init__(verbose)
-        # Those variables will be accessible in the callback
-        # (they are defined in the base class)
-        # The RL model
-        # self.model = None  # type: BaseAlgorithm
-        # An alias for self.model.get_env(), the environment used for training
-        # self.training_env = None  # type: Union[gym.Env, VecEnv, None]
-        # Number of time the callback was called
-        # self.n_calls = 0  # type: int
-        # self.num_timesteps = 0  # type: int
-        # local and global variables
-        # self.locals = None  # type: Dict[str, Any]
-        # self.globals = None  # type: Dict[str, Any]
-        # The logger object, used to report things in the terminal
-        # self.logger = None  # stable_baselines3.common.logger
-        # # Sometimes, for event callback, it is useful
-        # # to have access to the parent object
-        # self.parent = None  # type: Optional[BaseCallback]
-        self.env = env
-
-    def _on_training_start(self) -> None:
-        """
-        This method is called before the first rollout starts.
-        """
-        pass
-
-    def _on_rollout_start(self) -> None:
-        """
-        A rollout is the collection of environment interaction
-        using the current policy.
-        This event is triggered before collecting new samples.
-        """
-        pass
-
-    def _on_step(self) -> bool:
-        """
-        This method will be called by the model after each call to `env.step()`.
-
-        For child callback (of an `EventCallback`), this will be called
-        when the event is triggered.
-        
-        :return: (bool) If the callback returns False, training is aborted early.
-        """
-        self.env.render()
-        return True
-
-    def _on_rollout_end(self) -> None:
-        """
-        This event is triggered before updating the policy.
-        """
-        pass
-
-    def _on_training_end(self) -> None:
-        """
-        This event is triggered before exiting the `learn()` method.
-        """
-        pass
 
 
 class RLManager():
@@ -117,8 +52,10 @@ class RLManager():
         # define environment
         if env == 'unbalanced_disk':
             if not multi_target or method in ['q_learn', 'dqn']: 
+                print('Task: Single Target')
                 self.env = CustomUnbalancedDiskSingle(action_space_type=ACTION_SPACE_MAP[method])
             elif multi_target: # only in A2C
+                print('Task: Multi Target')
                 self.env = CustomUnbalancedDiskMulti()
         elif env == 'pendulum':
             self.env = CustomPendulum()
@@ -166,16 +103,20 @@ class RLManager():
                              rollout_length=ACTOR_CRITIC_PARAMS['rollout_length'],
                              agent_refresh=AGENT_REFRESH)
         elif method == 'a2c_built':
-            self.model = sb3.A2C(policy="MlpPolicy", 
-                                 env=self.env,
-                                 learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
-                                 n_steps=ACTOR_CRITIC_PARAMS['rollout_length'],
-                                 gamma=ACTOR_CRITIC_PARAMS['gamma'],
-                                 ent_coef=ACTOR_CRITIC_PARAMS['alpha_entropy'],
-                                 vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
-                                 tensorboard_log=MODELS_DIR,
-                                 verbose=1,
-                                 device='cpu'
+            self.model = A2CBuilt(policy="MlpPolicy", 
+                                  env=self.env,
+                                  learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
+                                  n_steps=ACTOR_CRITIC_PARAMS['rollout_length'],
+                                  gamma=ACTOR_CRITIC_PARAMS['gamma'],
+                                  ent_coef=ACTOR_CRITIC_PARAMS['alpha_entropy'],
+                                  vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
+                                  tensorboard_log=MODELS_DIR,
+                                  verbose=1,
+                                  device='auto',
+                                #   policy_kwargs= dict(activation_fn=nn.ReLU,
+                                #                       net_arch=dict(
+                                #                         pi=[32, 32], 
+                                #                         vf=[32, 32]))
             )
         else:
             raise ValueError('Unknown method %s' % method)
@@ -184,74 +125,28 @@ class RLManager():
         if mode == 'test':
             assert model_path is not None
             print('Loading model %s' % model_path)
-            if method == 'a2c_built':
-                self.model.set_parameters(load_path_or_dict=os.path.join(MODELS_DIR, model_path + '.zip'))
-            else:
-                self.model.load(path=model_path)
+            self.model.load(path=model_path)
 
         # reset environment
         self.init_obs = self.env.reset()
 
     def train(self, render=False):
         try:
-            # custom callback
-            cb = CustomCallback(self.env)
             
             # start training loop
-            if self.method == 'a2c_built':
-                self.model.learn(total_timesteps=self.total_timesteps, callback=cb)
-            else:
-                self.model.learn(total_timesteps=self.total_timesteps, render=render)
+            self.model.learn(total_timesteps=self.total_timesteps, render=render)
         
         finally: # Always run this
             # save model
-            log_dir = self.model.logger.get_dir() if self.method == 'a2c_built' else self.model.logger.log_dir
-            self.model.save(path=log_dir)
+            self.model.save(path=self.model.get_logdir())
 
             # close environment
             self.env.close()
             
     def simulate(self):
-        # try:
-        #     self.model.simulate(total_timesteps=self.test_steps)
-        # finally:
-        #     self.env.close()
+        try:
+            self.model.simulate(total_timesteps=self.total_timesteps)
+        finally:
+            self.env.close()
             
-            # NOTE: THIS IS FOR THE STABLE_BASELINES VALIDATION (later, replace the below code with the code block above)
-            # initialize environment
-            obs = self.env.reset()
-
-            # initialize stats
-            ep = 0
-            steps = 0
-            ep_cum_reward = 0
-
-            for i in range(self.total_timesteps):
-                # select action
-                action = self.model.predict(obs, deterministic=True)
-
-                # step action
-                obs, reward, done, info = self.env.step(action[0])
-                self.env.render()
-                
-                # sleep
-                time.sleep(AGENT_REFRESH)
-                
-                # update stats
-                ep_cum_reward += reward
-                steps += 1
-
-                # terminal state
-                if done:
-                    # log stats
-                    # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-
-                    # reset stats
-                    ep_cum_reward / steps
-                    ep_cum_reward = 0
-
-                    ep += 1
-                    steps = 0
-
-                    # reset environment
-                    self.env.reset()
+            

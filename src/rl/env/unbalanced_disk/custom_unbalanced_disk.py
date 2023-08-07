@@ -13,26 +13,13 @@ from config.env import (
     DISK_ACTIONS,
     DISK_NUM_ACTIONS,
     DESIRED_TARGET_ERROR,
-    MULTI_TARGET_ANGLES
+    MULTI_TARGET_ANGLES,
+    TARGET_ERROR_SINGLE,
+    TARGET_ERROR_MULTI,
+    REWARD_SINGLE,
+    REWARD_MULTI,
+    NORMALIZE_ANGLE
 )
-
-@staticmethod
-def normalize_angle(angle):
-    """
-    Normalizes the given angle to the range [-pi, pi].
-
-    This method takes an angle and normalizes it to the interval [-pi, pi], meaning that
-    if the angle is greater than pi or less than -pi, it will be "wrapped" around
-    to fall within this range.
-
-    Parameters:
-        angle (float): The angle in radians that needs to be normalized.
-
-    Returns:
-        float: The normalized angle in the range [-pi, pi].
-    """
-    return angle - (math.ceil((angle + math.pi)/(2*math.pi))-1)*2*math.pi
-
 
 class CustomUnbalancedDiskSingle(UnbalancedDisk):
     """
@@ -40,7 +27,8 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
     """
 
     def __init__(self, 
-                 action_space_type='discrete'):
+                 action_space_type : str ='discrete'):
+        
         super(CustomUnbalancedDiskSingle, self).__init__()
 
         # Modify the original action space
@@ -60,21 +48,20 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
         obs, reward, done_timeout, info = super().step(action)
 
         # normalize theta angle to (-pi/pi) range
-        theta = normalize_angle(obs[0])
+        theta = NORMALIZE_ANGLE(obs[0])
         omega = obs[1]
 
         # calculate done
-        if math.pi - abs(theta) <= DESIRED_TARGET_ERROR:
+        if TARGET_ERROR_SINGLE(theta) <= DESIRED_TARGET_ERROR:
             self.complete_steps += 1
         else:
             self.complete_steps = 0
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        r_angle = 1.0 * np.cos(np.pi - theta)                                           # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
-        r_speed = 0.025 * np.abs(omega) * np.cos(theta)                                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
-        r_voltage = -(1/6)*np.abs(action)                                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
-        reward = r_angle + r_speed + r_voltage                                          # -2.5 (worst) to +2.5 (best)
+        reward = REWARD_SINGLE(theta=theta,
+                               omega=omega,
+                               action=action)
 
         # append stats
         info['theta'] = theta
@@ -82,6 +69,7 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
         info['omega'] = omega
         info['complete_steps'] = self.complete_steps
         info['theta_error'] = np.pi - np.abs(info['theta'])
+        info['target_dev'] = 0
 
         return obs, reward, done, info
 
@@ -91,7 +79,6 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
 
     def render(self, mode='human'):
         return super().render(mode)
-
 
 class CustomUnbalancedDiskMulti(UnbalancedDisk):
     """
@@ -117,22 +104,24 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
         obs, _, done_timeout, info = super().step(action)
 
         # normalize theta angle to (-pi/pi) range
-        theta = normalize_angle(obs[0])
+        theta = NORMALIZE_ANGLE(obs[0])
         omega = obs[1]
         target_dev = obs[2]
+        target = NORMALIZE_ANGLE(math.pi + target_dev)
+
 
         # calculate done
-        if math.pi + target_dev - abs(theta) <= DESIRED_TARGET_ERROR:
+        if TARGET_ERROR_MULTI(theta, target) <= DESIRED_TARGET_ERROR:
             self.complete_steps += 1
         else:
             self.complete_steps = 0
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        r_angle = 1.0 * np.cos(np.pi + target_dev - theta)              # -1 (theta=0 (down), worst) to +1 (theta=+π or -π (up), best)
-        r_speed = 0.025 * np.abs(omega) * np.cos(theta)                 # -1 (fastest when theta=+π or -π, worst) to +1 (fastest when theta=0, best)
-        r_voltage = -(1/6)*np.abs(action)                               # -0.5 (highest absolute voltage, worst) to +0.5 (lowest absolute voltage, best)
-        reward = r_angle + r_speed + r_voltage                          # -2.5 (worst) to +2.5 (best)
+        reward = REWARD_MULTI(theta=theta,
+                              omega=omega,
+                              action=action,
+                              target=target)
 
         # append info stats
         info['theta'] = theta
@@ -150,7 +139,8 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
 
     def reset(self):
         self.complete_steps = 0
-        self.active_target = np.random.choice(MULTI_TARGET_ANGLES, size=1)
+        # self.active_target = np.random.choice(MULTI_TARGET_ANGLES, size=1)
+        self.active_target = 0
         return super().reset()
 
     def render(self, mode='human'):

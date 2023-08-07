@@ -36,5 +36,8 @@ python main.py gp --sparse --inducing 10 --train
 ## Reinforcement learning
 
 ```bash
-python src/main.py rl --train --agent dqn_built --env unbalanced_disk
+python src/main.py rl --train --agent dqn --env unbalanced_disk
+
+python src/main.py rl --train --agent a2c_built --render
 ```
+

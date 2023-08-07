@@ -80,6 +80,7 @@ class DQN(BaseAgent):
                               agent_refresh=agent_refresh)
         
         
+        
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.q_network = QNetwork(state_size=self.env.observation_space.shape[0], 
@@ -103,7 +104,10 @@ class DQN(BaseAgent):
         self.target_update_freq = target_update_freq
         self.hidden_layers = hidden_layers
 
-    def learn(self, total_timesteps : int, callback = None, render : bool = False):
+        # setup logger
+        self.setup_logger()
+
+    def learn(self, total_timesteps : int, render : bool = False):
         # Initialize statistics
         ep = 0
         temp_ep_reward = 0

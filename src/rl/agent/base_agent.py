@@ -10,6 +10,7 @@ from gym.wrappers.time_limit import TimeLimit
 
 # local imports
 from config.definitions import MODELS_DIR
+from config.env import DISK_ACTIONS
 
 class BaseAgent(object):
     def __init__(self, 
@@ -32,12 +33,17 @@ class BaseAgent(object):
         self.gamma = gamma
         self.agent_refresh = agent_refresh
 
+    
+    def setup_logger(self):
         # start tensorboard session
         self.log_dir = os.path.join(MODELS_DIR, self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         self.logger = SummaryWriter(log_dir=self.log_dir)
 
+    def get_logdir(self):
+        return self.logger.log_dir
+
     # abstract method for training
-    def learn(self, total_timesteps : int, callback = None, render : bool = False):
+    def learn(self, total_timesteps : int, render : bool = False):
         pass
 
     # abstract method for predicting action
@@ -77,10 +83,18 @@ class BaseAgent(object):
             ep_cum_reward += reward
             steps += 1
 
+            # log stats
+            self.logger.add_scalar('Output/theta', info['theta'], i)
+            self.logger.add_scalar('Output/omega', info['omega'], i)
+            self.logger.add_scalar('Output/reward', reward, i)
+            self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
+            self.logger.add_scalar('Input/action', DISK_ACTIONS[action], i)
+
             # terminal state
             if done:
                 # log stats
                 self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+                self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
                 # reset stats
                 ep_cum_reward / steps

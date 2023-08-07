@@ -133,6 +133,9 @@ class A2C(BaseAgent):
         self.rollout_length = rollout_length
         self.rb = RolloutBuffer()
 
+        # setup logger
+        self.setup_logger()
+
     def rollout(self, curr_timesteps : int, curr_episodes: int, render : bool = False):
         # Initialize statistics
         temp_ep_reward = 0
@@ -222,7 +225,7 @@ class A2C(BaseAgent):
                     obs = new_obs
         return curr_timesteps, curr_episodes
                     
-    def learn(self, total_timesteps: int, callback=None, render: bool=False):
+    def learn(self, total_timesteps: int, render: bool=False):
         # initialize counters
         self.total_timesteps = total_timesteps
         curr_episodes = 0; curr_timesteps = 0

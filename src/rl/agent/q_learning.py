@@ -36,7 +36,10 @@ class QLearning(BaseAgent):
         self.epsilon_end=epsilon_end
         self.epsilon_decay_steps=epsilon_decay_steps
 
-    def learn(self, total_timesteps : int, callback = None, render : bool = False):
+        # setup logger
+        self.setup_logger()
+
+    def learn(self, total_timesteps : int, render : bool = False):
         # initialize Q-table
         init_q_value = 0
         self.Qmat = defaultdict(lambda: init_q_value) # any new argument set to zero
