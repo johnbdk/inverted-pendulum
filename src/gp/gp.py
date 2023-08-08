@@ -10,9 +10,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 import GPy
 import GPy.plotting.gpy_plot as gpy_plot
 
-class PendulumGP:
+class GaussianProcess:
     """This class represents a Full Gaussian Process model for a Pendulum system."""
-
     def __init__(self) -> None:
         """
         Constructor for PendulumGP.
@@ -94,9 +93,9 @@ class PendulumGP:
 
         plt.show()
 
-class PendulumSGP:
-    """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
 
+class SparseGaussianProcess:
+    """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
     def __init__(self, X : np.ndarray, Y : np.ndarray, Z : np.ndarray) -> None:
 
         # define kernel

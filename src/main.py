@@ -7,7 +7,7 @@ import argparse
 from config.definitions import *
 from ann.model import train_narx, train_noe, eval_ann, grid_search
 from rl.manager import RLManager
-# from gp.model import PendulumGPManager
+from gp.manager import GPManager
 from config.rl import TRAIN_STEPS, TEST_STEPS
 
 ###########  P A R A M E T E R S  ###########
@@ -60,11 +60,13 @@ def __main__():
 
     # 1. SYSTEM IDENTIFICATION : Gaussian Process Task
     if args.method == 'gp':
+        gpm = GPManager(sparse=args.sparse, 
+                      num_inducing_points=args.inducing)
         if args.train:
-            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            # gpm.train()
             pass
         elif args.test:
-            # PendulumGPManager(sparse=args.sparse, num_inducing_points=args.inducing)
+            # gpm.test()
             pass
 
     # 2. SYSTEM IDENTIFICATION : Artificial Neural Network Task

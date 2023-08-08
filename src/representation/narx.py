@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable
 
 # Local imports
-from gp.model import PendulumGP, PendulumSGP
+from gp.gp import GaussianProcess, SparseGaussianProcess
 
 class NARX:
     def __init__(self, num_inputs=3, num_outputs=3) -> None:
@@ -24,7 +24,7 @@ class NARX:
             # Compute the current y given by f
             y_pred = f(np.concatenate((upast, ypast))[None, :])
             # Differentiate output between GP and ANN
-            if type(f.__self__) == PendulumGP or type(f.__self__) == PendulumSGP:
+            if type(f.__self__) == GaussianProcess or type(f.__self__) == SparseGaussianProcess:
                 y_pred_mean_np = y_pred[0][0] # numpy of means
                 y_pred_var_np = y_pred[1][0] # numpy of vars
                 ynow = y_pred_mean_np[0] # take the one and only element of means (since its a simulation)
