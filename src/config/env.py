@@ -23,8 +23,12 @@ MULTI_TARGET_ANGLES = [
     -np.pi/18,  # 10 degrees to the left from top
     0,          # exactly at the top
     +np.pi/18]  # 10 degrees to the right from top
+# MULTI_TARGET_ANGLES = [
+#     -np.pi/4,  # 10 degrees to the left from top
+#     0,          # exactly at the top
+#     +np.pi/4]  # 10 degrees to the right from top
 
-NORMALIZE_ANGLE = lambda angle: angle - (math.ceil((angle + math.pi)/(2*math.pi))-1)*2*math.pi
+NORMALIZE_ANGLE = lambda angle: angle - (np.ceil((angle + np.pi)/(2*np.pi))-1)*2*np.pi
 
 # single target reward functions
 TARGET_ERROR_SINGLE = lambda theta : np.pi - np.abs(theta)
