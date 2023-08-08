@@ -31,11 +31,6 @@ class CustomCallback(BaseCallback):
         # class attributes
         self.env = env
         self.render = render
-        
-        # pick timelimit environment wrapper to extract elapsed steps
-        self.env_time = self.env
-        while not isinstance(self.env_time, TimeLimit):
-            self.env_time = self.env_time.env
 
         # initialize stats
         self.temp_ep_reward = 0
@@ -44,6 +39,8 @@ class CustomCallback(BaseCallback):
         self.temp_theta_min = 0
         self.temp_theta_max = 0
         self.temp_ep_max_complete_steps = 0
+
+        self.elapsed_steps = 0
 
         # initialize counters
         self.ep = 0
@@ -68,21 +65,23 @@ class CustomCallback(BaseCallback):
         info = self.locals['infos'][0]
         done = self.locals['dones'][0]
 
-         # Update stats
+        # update stats
         self.temp_ep_reward += reward
-        self.temp_theta_max = max(info['theta_bottom'], self.temp_theta_max)
-        self.temp_theta_min = min(info['theta_bottom'], self.temp_theta_min)
+        self.temp_theta_max = max(info['theta'], self.temp_theta_max)
+        self.temp_theta_min = min(info['theta'], self.temp_theta_min)
         self.temp_max_swing = self.temp_theta_max - self.temp_theta_min
         self.temp_ep_theta_error += info['theta_error']
         self.temp_ep_max_complete_steps = max(info['complete_steps'], self.temp_ep_max_complete_steps)
+
+        self.elapsed_steps += 1
 
         if done:
             self.ep += 1
 
             # Log statistics
             self.logger.record('Practical/cum_reward', self.temp_ep_reward)
-            self.logger.record('Practical/cum_norm_reward', self.temp_ep_reward/self.env_time._elapsed_steps)
-            self.logger.record('Practical/ep_length', self.env_time._elapsed_steps)
+            self.logger.record('Practical/cum_norm_reward', self.temp_ep_reward/self.elapsed_steps)
+            self.logger.record('Practical/ep_length', self.elapsed_steps)
             self.logger.record('Practical/cum_theta_error', self.temp_ep_theta_error)
             self.logger.record('Practical/max_complete_steps', self.temp_ep_max_complete_steps)
             self.logger.record('Practical/max_swing', self.temp_max_swing)
@@ -94,6 +93,8 @@ class CustomCallback(BaseCallback):
             self.temp_ep_theta_error = 0
             self.temp_ep_max_complete_steps = 0
             self.temp_ep_reward = 0
+
+            self.elapsed_steps = 0
 
         self.s += 1
         return True
@@ -160,6 +161,9 @@ class A2CBuilt(BaseAgent):
         # initialize environment
         obs = self.env.reset()
 
+        # setup logger
+        self.setup_logger()
+
         # initialize stats
         ep = 0
         steps = 0
@@ -167,32 +171,32 @@ class A2CBuilt(BaseAgent):
 
         for i in range(total_timesteps):
             # select action
-            action = self.predict(obs, deterministic=True)
+            action = self.predict(obs, deterministic=True)[0]
 
             # step action
-            obs, reward, done, info = self.env.step(action[0])
+            obs, reward, done, info = self.env.step(action)
             self.env.render()
             
             # sleep
             time.sleep(self.agent_refresh)
-            
+
             # update stats
             ep_cum_reward += reward
             steps += 1
 
-            # # log stats
-            # self.logger.add_scalar('Output/theta', info['theta'], i)
-            # self.logger.add_scalar('Output/omega', info['omega'], i)
-            # self.logger.add_scalar('Output/reward', reward, i)
-            # self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
-            # self.logger.add_scalar('Input/action', DISK_ACTIONS[action], i)
+            # log stats
+            self.logger.add_scalar('Output/theta', info['theta'], i)
+            self.logger.add_scalar('Output/omega', info['omega'], i)
+            self.logger.add_scalar('Output/reward', reward, i)
+            self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
+            self.logger.add_scalar('Input/action', action, i)
 
             # terminal state
             print(obs, reward, done)
             if done:
-                # log stats
-                # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-                # self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
+                # log episodic stats
+                self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+                self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
                 # reset stats
                 ep_cum_reward / steps

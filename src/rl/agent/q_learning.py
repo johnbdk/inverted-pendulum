@@ -85,8 +85,8 @@ class QLearning(BaseAgent):
                 step_max_q.append(temp_max_q)
             if self.Qmat[obs, action] == init_q_value:
                 temp_ep_qpairs += 1
-            temp_theta_max = max(info['theta_bottom'], temp_theta_max)
-            temp_theta_min = min(info['theta_bottom'], temp_theta_min)
+            temp_theta_max = max(info['theta'], temp_theta_max)
+            temp_theta_min = min(info['theta'], temp_theta_min)
             temp_max_swing = temp_theta_max - temp_theta_min
             temp_ep_theta_error += info['theta_error']
             temp_ep_max_complete_steps = max(info['complete_steps'], temp_ep_max_complete_steps)

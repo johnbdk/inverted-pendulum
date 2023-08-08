@@ -117,7 +117,7 @@ class RLManager():
                                   vf_coef=ACTOR_CRITIC_PARAMS['alpha_actor'],
                                   tensorboard_log=MODELS_DIR,
                                   verbose=1,
-                                  device='auto',
+                                  device='cpu', # much faster than GPU
                                 #   policy_kwargs= dict(activation_fn=nn.ReLU,
                                 #                       net_arch=dict(
                                 #                         pi=[32, 32], 
@@ -150,6 +150,8 @@ class RLManager():
         print('Starting simulation')
         try:
             self.model.simulate(total_timesteps=self.total_timesteps)
+        except KeyboardInterrupt:
+            print("Keyboard interruption.")
         finally:
             self.env.close()
        

@@ -38,8 +38,7 @@ class CustomPendulum(PendulumEnv):
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # save obs to info
-        info['theta'] = theta
-        info['theta_bottom'] = np.pi - theta
+        info['theta'] = np.pi - theta
         info['omega'] = omega
         info['complete_steps'] = self.complete_steps
         info['theta_error'] = np.abs(theta)

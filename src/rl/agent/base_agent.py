@@ -88,7 +88,7 @@ class BaseAgent(object):
             self.logger.add_scalar('Output/omega', info['omega'], i)
             self.logger.add_scalar('Output/reward', reward, i)
             self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
-            self.logger.add_scalar('Input/action', DISK_ACTIONS[action], i)
+            self.logger.add_scalar('Input/action', action, i)
 
             # terminal state
             if done:

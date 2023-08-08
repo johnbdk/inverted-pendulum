@@ -38,6 +38,10 @@ python main.py gp --sparse --inducing 10 --train
 ```bash
 python src/main.py rl --train --agent dqn --env unbalanced_disk
 
-python src/main.py rl --train --agent a2c_built --render
+python src/main.py rl --train --agent a2c_built
+python src/main.py rl --train --agent a2c_built --multi_target
+
+python src/main.py rl --test --agent a2c_built --load A2C_1 --render
+
 ```
 
