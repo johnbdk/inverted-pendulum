@@ -26,9 +26,7 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
     Class to override the original UnbalancedDisk Gym Environment with a single target.
     """
 
-    def __init__(self, 
-                 action_space_type : str ='discrete'):
-        
+    def __init__(self, action_space_type : str = 'discrete'):
         super(CustomUnbalancedDiskSingle, self).__init__()
 
         # Modify the original action space
@@ -48,20 +46,27 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
         obs, reward, done_timeout, info = super().step(action)
 
         # normalize theta angle to (-pi/pi) range
-        theta = NORMALIZE_ANGLE(obs[0])
+        obs[0] = NORMALIZE_ANGLE(obs[0])
+        # obs[0] = obs[0] - (math.ceil((obs[0] + math.pi)/(2*math.pi))-1)*2*math.pi
+        theta = obs[0]
         omega = obs[1]
 
         # calculate done
-        if TARGET_ERROR_SINGLE(theta) <= DESIRED_TARGET_ERROR:
+        # if TARGET_ERROR_SINGLE(theta) <= DESIRED_TARGET_ERROR:
+        if (np.pi - np.abs(theta)) <= DESIRED_TARGET_ERROR:
             self.complete_steps += 1
         else:
             self.complete_steps = 0
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        reward = REWARD_SINGLE(theta=theta,
-                               omega=omega,
-                               action=action)
+        # reward = REWARD_SINGLE(theta=theta,
+        #                        omega=omega,
+        #                        action=action)
+        reward_theta = 1.0 * np.cos(np.pi - theta)
+        reward_omega = 0.025 * np.abs(omega) * np.cos(theta)
+        reward_action = -(1/6) * np.abs(action)
+        reward = reward_theta + reward_omega + reward_action
 
         # append stats
         info['theta'] = theta
@@ -104,24 +109,34 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
         obs, _, done_timeout, info = super().step(action)
 
         # normalize theta angle to (-pi/pi) range
-        theta = NORMALIZE_ANGLE(obs[0])
+        # theta = NORMALIZE_ANGLE(obs[0])
+        # obs[0] = obs[0] - (math.ceil((obs[0] + math.pi)/(2*math.pi))-1)*2*math.pi
+        obs[0] = NORMALIZE_ANGLE(obs[0])
+        theta = obs[0]
         omega = obs[1]
         target_dev = obs[2]
-        target = NORMALIZE_ANGLE(math.pi + target_dev)
-
+        # target = NORMALIZE_ANGLE(math.pi + target_dev)
+        # target = (math.pi + obs[2]) - (math.ceil(((math.pi + obs[2]) + math.pi)/(2*math.pi))-1)*2*math.pi
+        target = NORMALIZE_ANGLE(math.pi + obs[2])
 
         # calculate done
-        if TARGET_ERROR_MULTI(theta, target) <= DESIRED_TARGET_ERROR:
+        # if TARGET_ERROR_MULTI(theta, target) <= DESIRED_TARGET_ERROR:
+        _target_error_multi = np.pi - np.abs(np.pi - np.abs(theta - target))
+        if _target_error_multi <= DESIRED_TARGET_ERROR:
             self.complete_steps += 1
         else:
             self.complete_steps = 0
         done = done_timeout or (self.complete_steps >= WIN_STEPS)
 
         # calculate reward
-        reward = REWARD_MULTI(theta=theta,
-                              omega=omega,
-                              action=action,
-                              target=target)
+        # reward = REWARD_MULTI(theta=theta,
+        #                       omega=omega,
+        #                       action=action,
+        #                       target=target)
+        reward_multi_theta = 1.0 * np.cos(_target_error_multi)
+        reward_multi_omega =  -0.025 * np.abs(omega) * np.cos(_target_error_multi)
+        reward_multi_action = -(1/6) * np.abs(action)
+        reward = reward_multi_theta + reward_multi_omega + reward_multi_action
 
         # append info stats
         info['theta'] = theta

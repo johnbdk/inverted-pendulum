@@ -160,8 +160,6 @@ class A2CBuilt(BaseAgent):
         # initialize environment
         obs = self.env.reset()
 
-        
-
         # initialize stats
         ep = 0
         steps = 0
@@ -182,19 +180,19 @@ class A2CBuilt(BaseAgent):
             ep_cum_reward += reward
             steps += 1
 
-            # log stats
-            self.logger.add_scalar('Output/theta', info['theta'], i)
-            self.logger.add_scalar('Output/omega', info['omega'], i)
-            self.logger.add_scalar('Output/reward', reward, i)
-            self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
-            self.logger.add_scalar('Input/action', DISK_ACTIONS[action], i)
+            # # log stats
+            # self.logger.add_scalar('Output/theta', info['theta'], i)
+            # self.logger.add_scalar('Output/omega', info['omega'], i)
+            # self.logger.add_scalar('Output/reward', reward, i)
+            # self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
+            # self.logger.add_scalar('Input/action', DISK_ACTIONS[action], i)
 
             # terminal state
             print(obs, reward, done)
             if done:
                 # log stats
-                self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-                self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
+                # self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+                # self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
                 # reset stats
                 ep_cum_reward / steps
