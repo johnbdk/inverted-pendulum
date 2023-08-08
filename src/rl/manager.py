@@ -52,10 +52,10 @@ class RLManager():
         # define environment
         if env == 'unbalanced_disk':
             if not multi_target or method in ['q_learn', 'dqn']: 
-                print('Task: Single Target')
+                print('Task: Single target')
                 self.env = CustomUnbalancedDiskSingle(action_space_type=ACTION_SPACE_MAP[method])
             elif multi_target: # only in A2C
-                print('Task: Multi Target')
+                print('Task: Multi target')
                 self.env = CustomUnbalancedDiskMulti()
         elif env == 'pendulum':
             self.env = CustomPendulum()
@@ -67,11 +67,13 @@ class RLManager():
 
         # discretize if necessary
         if not multi_target and STATE_SPACE_MAP[method] == 'discrete':
+            print('Starting discretization')
             self.env = Discretizer(self.env, nvec=NVEC)
         
         # ---------------- model ----------------
         # define model
         if method == 'q_learn':
+            print('Loading Q-Learning')
             self.model = QLearning(env=self.env,
                                    callbackfeq=TEST_CALLBACK_FREQ,
                                    alpha=QLEARN_PARAMS['alpha'],
@@ -81,6 +83,7 @@ class RLManager():
                                    gamma=QLEARN_PARAMS['gamma'],
                                    agent_refresh=AGENT_REFRESH)
         elif method == 'dqn':
+            print('Loading DQN')
             self.model = DQN(env=self.env,
                               callbackfeq=TEST_CALLBACK_FREQ,
                               alpha=DQN_PARAMS['learning_rate'],
@@ -94,6 +97,7 @@ class RLManager():
                               batch_size=DQN_PARAMS['batch_size'],
                               target_update_freq=DQN_PARAMS['target_update_freq'],)
         elif method == 'a2c':
+            print('Loading A2C')
             self.model = A2C(env=self.env,
                              callbackfeq=TEST_CALLBACK_FREQ,
                              gamma=ACTOR_CRITIC_PARAMS['gamma'],
@@ -103,6 +107,7 @@ class RLManager():
                              rollout_length=ACTOR_CRITIC_PARAMS['rollout_length'],
                              agent_refresh=AGENT_REFRESH)
         elif method == 'a2c_built':
+            print('Loading A2C built')
             self.model = A2CBuilt(policy="MlpPolicy", 
                                   env=self.env,
                                   learning_rate=ACTOR_CRITIC_PARAMS['learning_rate'],
@@ -128,25 +133,23 @@ class RLManager():
             self.model.load(path=model_path)
 
         # reset environment
-        self.init_obs = self.env.reset()
+        # self.init_obs = self.env.reset()
 
     def train(self, render=False):
+        print('Starting train')
         try:
-            
             # start training loop
             self.model.learn(total_timesteps=self.total_timesteps, render=render)
-        
         finally: # Always run this
             # save model
             self.model.save(path=self.model.get_logdir())
-
             # close environment
             self.env.close()
             
     def simulate(self):
+        print('Starting simulation')
         try:
             self.model.simulate(total_timesteps=self.total_timesteps)
         finally:
             self.env.close()
-            
-            
+       
