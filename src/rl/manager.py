@@ -41,6 +41,17 @@ class RLManager():
                  multi_target : bool = False,
                  model_path : str | None = None,
                  ) -> None:
+        """
+        Constructor for the RLManager class.
+        
+        :param env: Environment type. Options: 'unbalanced_disk', 'pendulum'. Defaults to 'unbalanced_disk'.
+        :param method: Learning method. Options: 'q_learn', 'dqn', 'a2c', 'a2c_built'. Defaults to 'q_learn'.
+        :param mode: Mode of operation. Options: 'train', 'test'. Defaults to 'train'.
+        :param multi_target: Flag for multi-target task. Defaults to False.
+        :param model_path: Path to the model file if mode is 'test'. Defaults to None.
+        
+        Initializes the environment, model, and other configurations based on the provided parameters.
+        """
         
         # class attributes
         self.mode = mode
@@ -132,6 +143,14 @@ class RLManager():
         # self.init_obs = self.env.reset()
 
     def train(self, render=False):
+        """
+        Method to start training the model.
+        
+        :param render: Flag to enable rendering. Defaults to False.
+        
+        Starts the training loop and saves the model upon completion.
+        """
+
         print('Starting train')
         try:
             # start training loop
@@ -143,6 +162,12 @@ class RLManager():
             self.env.close()
             
     def simulate(self):
+        """
+        Method to start simulating the model.
+        
+        Initiates the simulation of the model and handles interruptions and environment closure.
+        """
+        
         print('Starting simulation')
         try:
             self.model.simulate()

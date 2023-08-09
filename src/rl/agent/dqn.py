@@ -21,13 +21,15 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state'
 
 class QNetwork(nn.Module):
     def __init__(self, state_size, action_size, hidden_layers=[20, 20], seed=42):
-        """Initialize parameters and build model.
-        Params
-        ======
-            state_size (int): Dimension of each state
-            action_size (int): Dimension of each action
-            seed (int): Random seed
-            fc1_units (int): Number of nodes in hidden layer
+        """
+        Constructor for the QNetwork class, representing a neural network for Q-values.
+        
+        :param state_size: Dimension of each state.
+        :param action_size: Dimension of each action.
+        :param hidden_layers: List containing the number of nodes in hidden layers.
+        :param seed: Random seed.
+        
+        Initializes the neural network with the provided parameters.
         """
         super(QNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
@@ -37,7 +39,12 @@ class QNetwork(nn.Module):
         print(self.fc_layers)
 
     def forward(self, state):
-        """Build a network that maps state -> action values."""
+        """
+        Forward pass method mapping state to action values.
+        
+        :param state: State for which to compute action values.
+        :return: Action values.
+        """
         x = state
         for layer in self.fc_layers[:-1]:
             x = F.relu(layer(x))
@@ -46,15 +53,42 @@ class QNetwork(nn.Module):
 
 class ReplayBuffer:
     def __init__(self, buffer_size):
+        """
+        Constructor for the ReplayBuffer class, representing a buffer for storing experiences.
+        
+        :param buffer_size: Maximum length of the buffer.
+        
+        Initializes the replay buffer.
+        """
         self.buffer = deque(maxlen=buffer_size)
 
     def add(self, state, action, reward, next_state, done):
+        """
+        Method to add an experience to the buffer.
+        
+        :param state: Current state.
+        :param action: Action taken.
+        :param reward: Reward obtained.
+        :param next_state: Next state.
+        :param done: Done flag.
+        """
         self.buffer.append(Experience(state, action, reward, next_state, done))
 
     def sample(self, batch_size):
+        """
+        Method to sample a batch of experiences from the buffer.
+        
+        :param batch_size: Size of the batch to sample.
+        :return: Random sample of experiences.
+        """
         return random.sample(self.buffer, batch_size)
 
     def __len__(self):
+        """
+        Method to determine the length of the replay buffer.
+        
+        :return: The length of the buffer.
+        """
         return len(self.buffer)
 
 
@@ -72,6 +106,19 @@ class DQN(BaseAgent):
                  buffer_size=50000,
                  batch_size=64,
                  target_update_freq=10000):
+        """
+        Constructor for the DQN class, representing a Deep Q-Network agent.
+        
+        :param env: The environment to interact with.
+        :param callbackfeq, alpha, gamma, agent_refresh: Parameters inherited from BaseAgent.
+        :param epsilon_start, epsilon_end, epsilon_decay_steps: Parameters for epsilon-greedy policy.
+        :param hidden_layers: List containing the number of nodes in hidden layers of the Q-network.
+        :param buffer_size: Size of the replay buffer.
+        :param batch_size: Batch size for training.
+        :param target_update_freq: Frequency for updating the target network.
+        
+        Initializes the DQN agent with the provided parameters.
+        """
         
         super(DQN, self).__init__(env,
                               callbackfeq=callbackfeq, 
@@ -108,6 +155,15 @@ class DQN(BaseAgent):
         self.setup_logger()
 
     def learn(self, total_timesteps : int, render : bool = False):
+        """
+        Method to train the DQN agent.
+        
+        :param total_timesteps: Total number of timesteps for training.
+        :param render: Flag to enable rendering. Defaults to False.
+        
+        Trains the agent using the DQN algorithm.
+        """
+
         # Initialize statistics
         ep = 0
         temp_ep_reward = 0
@@ -215,6 +271,16 @@ class DQN(BaseAgent):
         self.logger.close()
 
     def predict(self, obs, deterministic=False):
+        """
+        Method to predict an action based on an observation.
+        
+        :param obs: Observation from the environment.
+        :param deterministic: Flag to determine if the prediction is deterministic. Defaults to False.
+        :return: Predicted action.
+        
+        Uses the epsilon-greedy policy for exploration and exploitation.
+        """
+
         # exploration
         if not deterministic and np.random.uniform() < self.epsilon:  # exploration
             action = self.env.action_space.sample()
@@ -230,6 +296,15 @@ class DQN(BaseAgent):
         return action
 
     def update(self, replay_buffer):
+        """
+        Method to update the Q-network using experiences from the replay buffer.
+        
+        :param replay_buffer: Replay buffer containing experiences.
+        :return: Loss value for the batch update.
+        
+        Performs a batch update on the Q-network using experiences sampled from the replay buffer.
+        """
+         
         # Randomly sample a batch of experiences from the replay buffer
         batch = replay_buffer.sample(self.batch_size)
         
@@ -261,6 +336,14 @@ class DQN(BaseAgent):
         return loss
     
     def save(self, path):
+        """
+        Method to save the DQN model.
+        
+        :param path: Path to save the model.
+        
+        Saves the Q-network state dictionary to the specified path.
+        """
+
         torch.save({
             'q_network_state_dict': self.q_network.state_dict(),
             # 'target_network_state_dict': self.target_network.state_dict(),
@@ -268,6 +351,14 @@ class DQN(BaseAgent):
         }, f=os.path.join(path, 'model.pth'))
 
     def load(self, path):
+        """
+        Method to load the DQN model.
+        
+        :param path: Path to load the model from.
+        
+        Loads the Q-network state dictionary from the specified path.
+        """
+        
         checkpoint = torch.load(f=os.path.join(MODELS_DIR, path, 'model.pth'))
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         # self.target_network.load_state_dict(checkpoint['target_network_state_dict'])

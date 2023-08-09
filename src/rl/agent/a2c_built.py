@@ -20,6 +20,16 @@ class CustomCallback(BaseCallback):
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
     def __init__(self, env, verbose=0, render=False):
+        """
+        A custom callback for logging statistics during training.
+        
+        :param env: The environment to interact with.
+        :param verbose: Verbosity level, 0 for no output, 1 for info messages, 2 for debug messages.
+        :param render: Flag to enable rendering.
+
+        Initializes the custom callback with statistics and counters.
+        """
+
         super(CustomCallback, self).__init__(verbose)
 
         # class attributes
@@ -42,12 +52,11 @@ class CustomCallback(BaseCallback):
         
     def _on_step(self) -> bool:
         """
-        This method will be called by the model after each call to `env.step()`.
-
-        For child callback (of an `EventCallback`), this will be called
-        when the event is triggered.
+        Method called by the model after each call to `env.step()`.
         
         :return: (bool) If the callback returns False, training is aborted early.
+
+        Performs logging and statistics updates for each step.
         """
 
         # render the environment if possible
@@ -108,6 +117,20 @@ class A2CBuilt(BaseAgent):
                  verbose : int = 2,
                  device : str = 'auto',
                  policy_kwargs : Dict[str, Any] | None = None):
+        """
+        Constructor for the A2CBuilt class, representing a built-in A2C agent.
+        
+        :param policy: Policy architecture to use (e.g. 'MlpPolicy').
+        :param env: The environment to interact with.
+        :param learning_rate, n_steps, gamma, ent_coef, vf_coef: A2C hyperparameters.
+        :param tensorboard_log: Directory for TensorBoard logs.
+        :param callbackfeq, agent_refresh: Parameters inherited from BaseAgent.
+        :param verbose: Verbosity level.
+        :param device: Device to run on ('auto', 'cuda', 'cpu').
+        :param policy_kwargs: Additional keyword arguments for the policy.
+
+        Initializes the A2C agent with the provided parameters.
+        """
         
         self.env = env
         super().__init__(env, 
@@ -130,9 +153,22 @@ class A2CBuilt(BaseAgent):
                     )
 
     def get_logdir(self):
+        """
+        :return: Logging directory path.
+        """
+
         return self.model.logger.get_dir()
     
     def learn(self, total_timesteps : int, render : bool = False):
+        """
+        Method to train the A2C agent.
+        
+        :param total_timesteps: Total number of timesteps for training.
+        :param render: Flag to enable rendering. Defaults to False.
+        
+        Trains the agent using the A2C algorithm.
+        """
+
         # set up callback
         self.callback = CustomCallback(env=self.env, 
                                        render=render)
@@ -141,17 +177,48 @@ class A2CBuilt(BaseAgent):
         self.model.learn(total_timesteps=total_timesteps, callback=self.callback)
 
     def predict(self, obs, deterministic=False):
+        """
+        Method to predict an action based on an observation.
+        
+        :param obs: Observation from the environment.
+        :param deterministic: Flag to determine if the prediction is deterministic. Defaults to False.
+        :return: Predicted action.
+        
+        Uses the A2C model to predict the action.
+        """
         return self.model.predict(obs, deterministic=deterministic)
 
     def save(self, path):
+        """
+        Method to save the A2C model.
+        
+        :param path: Path to save the model.
+        
+        Saves the model to the specified path.
+        """
+
         self.model.save(path)
 
     def load(self, path):
+        """
+        Method to load the A2C model.
+        
+        :param path: Path to load the model from.
+        
+        Loads the model from the specified path.
+        """
+
         self.model.set_parameters(
             load_path_or_dict=os.path.join(MODELS_DIR, path + '.zip')
         )
 
     def simulate(self):
+        """
+        Method to simulate the A2C agent.
+
+        Simulates the agent's behavior, logs statistics, and renders the environment.
+        """
+        
         # initialize environment
         obs = self.env.reset()
 

@@ -11,8 +11,6 @@ import numpy as np
 from rl.agent.base_agent import BaseAgent
 from config.definitions import MODELS_DIR
 
-# parameters
-PRINT_FREQ = 1000
 
 class QLearning(BaseAgent):
     def __init__(self, 
@@ -30,7 +28,22 @@ class QLearning(BaseAgent):
                               alpha=alpha,
                               gamma=gamma,
                               agent_refresh=agent_refresh)
+        """
+        Constructor for the QLearning class.
         
+        :param env: The environment to interact with.
+        :param callbackfeq: Frequency of callbacks. Defaults to 100.
+        :param alpha: Learning rate. Defaults to 0.2.
+        :param epsilon_start: Initial epsilon for the epsilon-greedy policy. Defaults to 1.0.
+        :param epsilon_end: Final epsilon for the epsilon-greedy policy. Defaults to 0.1.
+        :param epsilon_decay_steps: Number of steps for epsilon decay. Defaults to 0.9 * 5000.
+        :param gamma: Discount factor. Defaults to 0.99.
+        :param agent_refresh: Refresh rate of the agent. Defaults to 1/60.
+        
+        Initializes the Q-learning agent with the provided parameters.
+        """
+        
+        # extra class attributes
         self.epsilon_start = epsilon_start
         self.epsilon = self.epsilon_start
         self.epsilon_end=epsilon_end
@@ -40,6 +53,15 @@ class QLearning(BaseAgent):
         self.setup_logger()
 
     def learn(self, total_timesteps : int, render : bool = False):
+        """
+        Method to train the Q-learning agent.
+        
+        :param total_timesteps: Total number of timesteps for training.
+        :param render: Flag to enable rendering. Defaults to False.
+        
+        Initializes the Q-table and trains the agent using the Q-learning algorithm.
+        """
+
         # initialize Q-table
         init_q_value = 0
         self.Qmat = defaultdict(lambda: init_q_value) # any new argument set to zero
@@ -166,6 +188,16 @@ class QLearning(BaseAgent):
         return self.Qmat
     
     def predict(self, obs, deterministic=False):
+        """
+        Method to predict an action based on an observation.
+        
+        :param obs: Observation from the environment.
+        :param deterministic: Flag to determine if the prediction is deterministic. Defaults to False.
+        :return: Predicted action.
+        
+        Uses the epsilon-greedy policy for exploration and exploitation.
+        """
+
         # exploration
         if not deterministic and np.random.uniform() < self.epsilon: # exploration (random)
             action = self.env.action_space.sample()
@@ -177,9 +209,24 @@ class QLearning(BaseAgent):
         return action
     
     def save(self, path):
+        """
+        Method to save the Q-table.
+        
+        :param path: Path to save the Q-table.
+        
+        Saves the Q-table to the specified path.
+        """
+
         with open(os.path.join(path, 'q-table.pkl'), 'wb') as f:
             pickle.dump(dict(self.Qmat), f)
 
     def load(self, path):
+        """
+        Method to load the Q-table.
+        
+        :param path: Path to load the Q-table from.
+        
+        Loads the Q-table from the specified path.
+        """
         with open(os.path.join(MODELS_DIR, path, 'q-table.pkl'), 'rb') as f:
             self.Qmat = pickle.load(f)

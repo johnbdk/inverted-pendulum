@@ -19,47 +19,89 @@ class BaseAgent(object):
                  alpha=0.2,
                  gamma=0.99,
                  agent_refresh=1/60):
+        """
+        Constructor for the BaseAgent class.
         
+        :param env: The environment to interact with.
+        :param callbackfeq: Frequency of callbacks. Defaults to 100.
+        :param alpha: Learning rate. Defaults to 0.2.
+        :param gamma: Discount factor. Defaults to 0.99.
+        :param agent_refresh: Refresh rate of the agent. Defaults to 1/60.
+        
+        Initializes the agent with the provided parameters.
+        """
+        
+        # class attributes
         self.env = env
+        self.callbackfeq = callbackfeq
+        self.alpha = alpha
+        self.gamma = gamma
+        self.agent_refresh = agent_refresh
 
         # pick timelimit environment wrapper to extract elapsed steps
         self.env_time = self.env
         while not isinstance(self.env_time, TimeLimit):
             self.env_time = self.env_time.env
 
-        self.callbackfeq = callbackfeq
-        self.alpha = alpha
-        
-        self.gamma = gamma
-        self.agent_refresh = agent_refresh
-
     
     def setup_logger(self):
-        # start tensorboard session
+        """
+        Method to set up the logger for tensorboard session.
+        """
+
+        # generate the log path
         self.log_dir = os.path.join(MODELS_DIR, self.__class__.__name__ + '_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+
+        # start tensorboard session
         self.logger = SummaryWriter(log_dir=self.log_dir)
 
     def get_logdir(self):
+        """
+        Method to get the log directory.
+        
+        :return: Path to the log directory.
+        """
         return self.logger.log_dir
 
-    # abstract method for training
     def learn(self, total_timesteps : int, render : bool = False):
+        """
+        Abstract method for training the agent.
+        
+        :param total_timesteps: Total number of timesteps for training.
+        :param render: Flag to enable rendering. Defaults to False.
+        """
         pass
 
-    # abstract method for predicting action
     def predict(self, obs, deterministic=False):
+        """
+        Abstract method for predicting an action based on an observation.
+        
+        :param obs: Observation from the environment.
+        :param deterministic: Flag to determine if the prediction is deterministic. Defaults to False.
+        :return: Predicted action.
+        """
         pass
 
-    # abstract method for saving model
     def save(self, path : str):
+        """
+        Abstract method for saving the model.
+        
+        :param path: Path to save the model.
+        """
         pass
 
-    # abstract method for loading model
     def load(self):
+        """
+        Abstract method for loading the model.
+        """
         pass
 
-    # method for testing (override in extended classes if necessary)
     def simulate(self):
+        """
+        Method for testing the agent (can be overridden in extended classes if necessary).
+        
+        Simulates the agent's interactions with the environment and logs relevant statistics.
+        """
         # initialize environment
         obs = self.env.reset()
 
