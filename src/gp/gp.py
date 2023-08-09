@@ -129,17 +129,16 @@ class SparseGaussianProcess:
         plt.legend()
         plt.grid()
 
-
         plt.subplot(3, 1, 2)
         plt.plot(time, Y)
         plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
         plt.title('Prediction with error bar')
         plt.grid()
 
-
         # Plot error
         plt.subplot(3, 1, 3)
-        plt.plot(time, Y-Y_pred, label='Output angle error')
+        plt.plot(time, Y, label='Ground truth angle error')
+        plt.plot(time, Y-Y_pred, label='Residuals angle error')
         plt.xlabel('time')
         plt.ylabel('Estimation error (th)')
         plt.title('Sparse GP Estimation Error')

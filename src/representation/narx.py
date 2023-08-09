@@ -22,7 +22,8 @@ class NARX:
         results = {}
         for unow in u.tolist():
             # Compute the current y given by f
-            y_pred = f(np.concatenate((upast, ypast))[None, :])
+            uy_concat = np.concatenate((upast, ypast))[None, :]
+            y_pred = f(uy_concat)
             # Differentiate output between GP and ANN
             if type(f.__self__) == GaussianProcess or type(f.__self__) == SparseGaussianProcess:
                 y_pred_mean_np = y_pred[0][0] # numpy of means

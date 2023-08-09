@@ -32,9 +32,13 @@ class GPManager:
         self.num_outputs = num_outputs
         self.sparse = sparse
         self.num_inducing_points = num_inducing_points
+        
+        # Instantiate data model representation
+        repr = NARX(num_inputs=self.num_inputs, num_outputs=self.num_outputs)
 
         # Load dataset
         data = self.load_data(
+            data_model=repr,
             file_name=os.path.join(DATASET_DIR, 'training-data.csv'),
             split_ratio=(0.7, 0.2, 0.1)   # 70% train, 20% validation, 10% test
         )
@@ -51,23 +55,21 @@ class GPManager:
             self.pendulum_gp = SparseGaussianProcess(X=X_train, Y=Y_train, Z=inducing_points, io_max=self.num_inputs + self.num_outputs)
         else:
             self.pendulum_gp = GaussianProcess()
-            
 
         # train GP model
         self.pendulum_gp.fit(X_train, Y_train)
 
         # test GP model
-        sim = repr.simulate(X_test, f=self.pendulum_gp.predict)
+        sim = repr.simulate(X_test[:, 0], f=self.pendulum_gp.predict)
         Y_pred = sim['mean']
         var = sim['var']
         print("y_pred.shape", Y_pred.shape)
         # y_pred, sigma = self.pendulum_gp.predict(X_test)
 
         # plot data
-        # self.pendulum_gp.plot(X_test, Y_test, y_pred, sigma)
-        self.pendulum_gp.plot(data['test']['X'], data['test']['Y'], Y_pred, var)
+        self.pendulum_gp.plot(X_test[:, 0], Y_test, Y_pred, var)
 
-    def load_data(self, file_name : str, split_ratio=(0.7, 0.2, 0.1)) -> dict:
+    def load_data(self, data_model, file_name : str, split_ratio=(0.7, 0.2, 0.1)) -> dict:
         """
         Load data from a CSV file and splits the data into training/validation/test set.
 
@@ -95,14 +97,13 @@ class GPManager:
         X = data['u'].values
         Y = data['th'].values
 
-        np.set_printoptions(threshold=sys.maxsize)
+        # np.set_printoptions(threshold=sys.maxsize)
         print("Number of inputs, outputs: {}, {}".format(self.num_inputs, self.num_outputs))
         print("Data input type: {}, with shape: {}".format(type(X), X.shape))
         print("Data output type: {}, with shape: {}".format(type(Y), Y.shape))
 
-        # # Pass data through model representation
-        repr = NARX(num_inputs=self.num_inputs, num_outputs=self.num_outputs)
-        X_narx, Y_narx = repr.make_training_data(X, Y)
+        # Pass data through model representation
+        X_narx, Y_narx = data_model.make_training_data(X, Y)
         print("Features type: {}, with shape: {}".format(type(X_narx), X_narx.shape))
         print("Outputs type: {}, with shape: {}".format(type(Y_narx), Y_narx.shape))
 
