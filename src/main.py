@@ -38,11 +38,10 @@ parser_ann = subparsers.add_parser("ann", parents=[parent_parser],
 
 parser_gp = subparsers.add_parser("gp", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
-parser_gp.add_argument('--nb', type=int, default=3, help='Number of past inputs')
-parser_gp.add_argument('--na', type=int, default=3, help='Number of past outputs')
-parser_gp.add_argument('--sparse', action='store_true', default=False, help="name of the method to be used")
-parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model')
-
+parser_gp.add_argument('--nb', type=int, default=3, help='Number of past inputs of NARX')
+parser_gp.add_argument('--na', type=int, default=3, help='Number of past outputs of NARX')
+parser_gp.add_argument('--sparse', action='store_true', default=False, help="Method to be used (Sparse or Full Gaussian process)")
+parser_gp.add_argument('--inducing', type=int, default=0, help='Number of inducing points (used in sparse Gaussian process)')
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
@@ -53,7 +52,6 @@ parser_rl.add_argument('--env', type=str, choices=['unbalanced_disk', 'pendulum'
 parser_rl.add_argument('--multi_target', action='store_true', default=False, 
                        help='Choose environment with single or multiple targets (applies to the unbalanced disk env only!)')
 parser_rl.add_argument('--render', action='store_true', default=False, help="whether or not to render environment during training")
-
 parser_rl.add_argument('--load', type=str, default='QLearning_Best_0', required=False, help='Path of model to load')
 
 def __main__():

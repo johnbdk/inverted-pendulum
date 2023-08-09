@@ -1,19 +1,16 @@
 # inverted-pendulum
 This project is about implemented a reinforcement learning approach in combination with artificial neural networks (ANN) and Gaussian processes (GP) to stabilize an inverted pendulum at a target position
 
+## Artificial Neural Network
+
 Eg. to train ANN with architecture noe:
 ```bash
 python .\main.py ann --train --model-arch noe
 ```
 
-Eg. to test GP with architecture narx:
+Eg. to test ANN with architecture noe and a specific model:
 ```bash
-python .\main.py gp --test --model-arch narx   
-```
-
-Eg. to test ANN with architecture ss and specific model:
-```bash
-python .\main.py gp --test --model-arch narx --model-file state_space.pth 
+python .\main.py ann --test --model-arch noe --model-file state_space.pth 
 ```
 
 Eg. to train ANN with architecture narx and display detailed processing information on your screen with the flag verbose:
@@ -26,18 +23,25 @@ Eg. to RE-train ANN with architecture narx and display detailed processing infor
 python .\main.py ann --train --model-arch narx --model-path narx.pth --verbose
 ```
 
-As you can see, on the last example we also specified the model name. This is because we, need to load the model first, save its current state and continue its training.
+As you can see, on the last example we also specified the model name. This is because the model, first, needs to be loaded so as to save its current state and continue its training.
 
+## Gaussian Process
+
+Eg. to train (test) Full GP with architecture narx:
 ```bash
-python main.py gp --sparse --inducing 10 --train
+python .\main.py gp --train --nb [number_of_past_inputs] --na [number_of_past_outputs]
 ```
 
-
-## Reinforcement learning
-
-Train RL with q learning:
+Eg. to train (test) Sparse GP with architecture narx:
 ```bash
-python src/main.py rl --train
+python main.py gp --train --nb [number_of_past_inputs] --na [number_of_past_outputs] --sparse --inducing 10
+```
+
+## Reinforcement Learning
+
+Train RL with q learning (by default / you can omit the --agent flag):
+```bash
+python src/main.py rl --train --agent q_learn
 ```
 
 Train RL with DQN:
@@ -50,12 +54,12 @@ Train RL with A2C (single target):
 python src/main.py rl --train --agent a2c_built
 ```
 
-To specify the multi_target task, add the following flag:
+To specify the multi_target task, add the following flag (this is only applied on the actor critic method):
 ```bash
     --multi_target
 ```
 
-To render, add the following flag:
+To use render, add the following flag:
 ```bash
     --render
 ```
