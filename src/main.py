@@ -38,6 +38,8 @@ parser_ann = subparsers.add_parser("ann", parents=[parent_parser],
 
 parser_gp = subparsers.add_parser("gp", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
+parser_gp.add_argument('--nb', type=int, default=3, help='Number of past inputs')
+parser_gp.add_argument('--na', type=int, default=3, help='Number of past outputs')
 parser_gp.add_argument('--sparse', action='store_true', default=False, help="name of the method to be used")
 parser_gp.add_argument('--inducing', type=int, default=0, help='Train the model')
 
@@ -60,8 +62,10 @@ def __main__():
 
     # 1. SYSTEM IDENTIFICATION : Gaussian Process Task
     if args.method == 'gp':
-        gpm = GPManager(sparse=args.sparse, 
-                      num_inducing_points=args.inducing)
+        gpm = GPManager(num_inputs=args.nb,
+                        num_outputs=args.na,
+                        sparse=args.sparse,
+                        num_inducing_points=args.inducing)
         if args.train:
             # gpm.train()
             pass

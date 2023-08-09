@@ -96,10 +96,10 @@ class GaussianProcess:
 
 class SparseGaussianProcess:
     """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
-    def __init__(self, X : np.ndarray, Y : np.ndarray, Z : np.ndarray) -> None:
+    def __init__(self, X : np.ndarray, Y : np.ndarray, Z : np.ndarray, io_max : int) -> None:
 
         # define kernel
-        self.kernel = GPy.kern.RBF(input_dim=6, lengthscale=1.0, variance=1.0)
+        self.kernel = GPy.kern.RBF(input_dim=io_max, lengthscale=1.0, variance=1.0)
 
         # define regressor
         if Y.ndim == 1:

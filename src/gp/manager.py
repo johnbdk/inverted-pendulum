@@ -1,13 +1,13 @@
 # External libraries
 import os
+import sys
 import numpy as np
 import pandas as pd
-
 
 # Local imports
 from gp.gp import GaussianProcess, SparseGaussianProcess
 from representation.narx import NARX
-from config.definitions import *
+from config.definitions import DATASET_DIR
 
 
 class GPManager:
@@ -17,7 +17,7 @@ class GPManager:
     testing the GP model, and plotting the results.
     """
 
-    def __init__(self, sparse=True, num_inducing_points=0, num_inputs=3, num_outputs=3) -> None:
+    def __init__(self, num_inputs=3, num_outputs=3, sparse=True, num_inducing_points=0) -> None:
         """
         Constructor for GPManager.
 
@@ -30,6 +30,8 @@ class GPManager:
 
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
+        self.sparse = sparse
+        self.num_inducing_points = num_inducing_points
 
         # Load dataset
         data = self.load_data(
@@ -37,34 +39,33 @@ class GPManager:
             split_ratio=(0.7, 0.2, 0.1)   # 70% train, 20% validation, 10% test
         )
 
-        # # Pass data through model representation
-        # repr = NARX(num_inputs=num_inputs, num_outputs=num_outputs)
-        # X_train, Y_train = repr.make_training_data(data['train']['X'], data['train']['Y'])
-        # X_val, Y_val = repr.make_training_data(data['val']['X'], data['val']['Y'])
-        # X_test, Y_test = repr.make_training_data(data['test']['X'], data['test']['Y'])
+        # extract data splits
+        X_train, Y_train = data['train']
+        X_val, Y_val = data['val']
+        X_test, Y_test = data['test']
 
-        # # define the gaussian process model
-        # if sparse:
-        #     min_x, max_x = np.min(X_train), np.max(X_train)
-        #     inducing_points = np.random.uniform(low=min_x, high=max_x, size=(num_inducing_points, num_inputs + num_outputs))
-        #     self.pendulum_gp = SparseGaussianProcess(X=X_train, Y=Y_train, Z=inducing_points)
-        # else:
-        #     self.pendulum_gp = GaussianProcess()
+        # define the gaussian process model
+        if sparse:
+            min_x, max_x = np.min(X_train), np.max(X_train)
+            inducing_points = np.random.uniform(low=min_x, high=max_x, size=(self.num_inducing_points, self.num_inputs + self.num_outputs))
+            self.pendulum_gp = SparseGaussianProcess(X=X_train, Y=Y_train, Z=inducing_points, io_max=self.num_inputs + self.num_outputs)
+        else:
+            self.pendulum_gp = GaussianProcess()
             
 
-        # # train GP model
-        # self.pendulum_gp.fit(X_train, Y_train)
+        # train GP model
+        self.pendulum_gp.fit(X_train, Y_train)
 
-        # # test GP model        
-        # sim = repr.simulate(data['test']['X'], f=self.pendulum_gp.predict)
-        # Y_pred = sim['mean']
-        # var = sim['var']
-        # print("y_pred.shape", Y_pred.shape)
-        # # y_pred, sigma = self.pendulum_gp.predict(X_test)
+        # test GP model
+        sim = repr.simulate(X_test, f=self.pendulum_gp.predict)
+        Y_pred = sim['mean']
+        var = sim['var']
+        print("y_pred.shape", Y_pred.shape)
+        # y_pred, sigma = self.pendulum_gp.predict(X_test)
 
-        # # plot data
-        # # self.pendulum_gp.plot(X_test, Y_test, y_pred, sigma)
-        # self.pendulum_gp.plot(data['test']['X'], data['test']['Y'], Y_pred, var)
+        # plot data
+        # self.pendulum_gp.plot(X_test, Y_test, y_pred, sigma)
+        self.pendulum_gp.plot(data['test']['X'], data['test']['Y'], Y_pred, var)
 
     def load_data(self, file_name : str, split_ratio=(0.7, 0.2, 0.1)) -> dict:
         """
@@ -90,45 +91,44 @@ class GPManager:
         assert np.abs(split_ratio[0] + split_ratio[1] + split_ratio[2] - 1.0) < 1e-3
 
         # load data
-        data = pd.read_csv(file_name)[:5000]
+        data = pd.read_csv(file_name)
         X = data['u'].values
         Y = data['th'].values
-        
-        print(type(X), X.shape)
-        print(type(Y), Y.shape)
+
+        np.set_printoptions(threshold=sys.maxsize)
+        print("Number of inputs, outputs: {}, {}".format(self.num_inputs, self.num_outputs))
+        print("Data input type: {}, with shape: {}".format(type(X), X.shape))
+        print("Data output type: {}, with shape: {}".format(type(Y), Y.shape))
+
         # # Pass data through model representation
         repr = NARX(num_inputs=self.num_inputs, num_outputs=self.num_outputs)
         X_narx, Y_narx = repr.make_training_data(X, Y)
-        print(type(X_narx), X_narx.shape)
-        print(type(Y_narx), Y_narx.shape)
+        print("Features type: {}, with shape: {}".format(type(X_narx), X_narx.shape))
+        print("Outputs type: {}, with shape: {}".format(type(Y_narx), Y_narx.shape))
 
 
-
-
-
-
+        len_data = X_narx.shape[0]
         # # load subset of data
-        # train_samples = int(split_ratio[0] * len(data))
-        # val_samples = int(split_ratio[1] * len(data))
-        # test_samples = int(split_ratio[2] * len(data))
+        train_samples = int(split_ratio[0] * len_data)     # 0.7 * (800000 - max(na,nb)) = 56000
+        val_samples = int(split_ratio[1] * len_data)       # 0.2 * (800000 - max(na,nb)) = 16000
+        test_samples = int(split_ratio[2] * len_data)      # 0.1 * (800000 - max(na,nb)) = 8000
 
-        # X_train = X[:train_samples]
-        # Y_train = Y[:train_samples]
+        X_train = X_narx[:train_samples]
+        Y_train = Y_narx[:train_samples]
 
-        # X_val = X[train_samples:train_samples+val_samples]
-        # Y_val = Y[train_samples:train_samples+val_samples]
+        X_val = X_narx[train_samples : train_samples+val_samples]
+        Y_val = Y_narx[train_samples : train_samples+val_samples]
 
-        # X_test = X[val_samples:val_samples+test_samples]
-        # Y_test = Y[val_samples:val_samples+test_samples]
+        X_test = X_narx[val_samples : val_samples+test_samples]
+        Y_test = Y_narx[val_samples : val_samples+test_samples]
 
-        # print('Dataset loaded with %d training samples, %d validation samples, %d test samples!' % (train_samples, val_samples, test_samples))
-        
-        # # return data
-        # return {
-        #     'train' : {'X' : X_train, 
-        #                'Y' : Y_train},
-        #     'val'   : {'X' : X_val, 
-        #                'Y' : Y_val},
-        #     'test'  : {'X' : X_test, 
-        #                'Y' : Y_test}
-        # }
+        print("Train/Val/Test features shapes : {}/{}/{}".format(X_train.shape, X_val.shape, X_test.shape))
+        print("Train/Val/Test outputs shapes : {}/{}/{}".format(Y_train.shape, Y_val.shape, Y_test.shape))
+        print('Dataset loaded with %d training samples, %d validation samples, %d test samples!' % (train_samples, val_samples, test_samples))
+
+        # return data
+        return {
+            'train' : (X_train, Y_train),
+            'val'   : (X_val, Y_val),
+            'test'  : (X_test, Y_test)
+        }

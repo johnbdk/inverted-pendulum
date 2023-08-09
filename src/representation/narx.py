@@ -55,11 +55,5 @@ class NARX:
         Xdata = np.empty(shape=(u.shape[0] - io_max, self.num_inputs+self.num_outputs))
         for i in range(io_max, u.shape[0]):
             Xdata[i - io_max] = np.concatenate([u[i-self.num_inputs:i], y[i-self.num_outputs:i]])
-        # print("u shape: {}".format(u.shape))
-        # print("y shape: {}".format(y.shape))
-        # print("Xdata shape: {}".format(Xdata.shape))
-        # print("u[{}:{}]: {}".format(0, self.num_inputs, u[0:self.num_inputs]))
-        # print("y[{}:{}]: {}".format(0, self.num_outputs, y[0:self.num_outputs]))
-        # print("Xdata[{}]: {}".format(0, Xdata[0]))
         return Xdata, y[io_max:]
     
