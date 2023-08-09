@@ -4,20 +4,14 @@ import time
 from typing import Dict, Any
 
 # external imports
-import torch
-import gym
 import torch.nn as nn
 import stable_baselines3 as sb3
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.policies import ActorCriticPolicy
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from gym.wrappers.time_limit import TimeLimit
 
 # local imports
 from rl.agent.base_agent import BaseAgent
 from config.definitions import MODELS_DIR
-from config.rl import AGENT_REFRESH
-from config.env import DISK_ACTIONS
+from config.rl import TEST_EPISODES
 
 class CustomCallback(BaseCallback):
     """
@@ -134,7 +128,7 @@ class A2CBuilt(BaseAgent):
                              device=device,
                              policy_kwargs=policy_kwargs,
                     )
-            
+
     def get_logdir(self):
         return self.model.logger.get_dir()
     
@@ -157,7 +151,7 @@ class A2CBuilt(BaseAgent):
             load_path_or_dict=os.path.join(MODELS_DIR, path + '.zip')
         )
 
-    def simulate(self, total_timesteps: int):
+    def simulate(self):
         # initialize environment
         obs = self.env.reset()
 
@@ -165,45 +159,43 @@ class A2CBuilt(BaseAgent):
         self.setup_logger()
 
         # initialize stats
-        ep = 0
         steps = 0
         ep_cum_reward = 0
+        done = False
 
-        for i in range(total_timesteps):
-            # select action
-            action = self.predict(obs, deterministic=True)[0]
+        for ep in range(TEST_EPISODES):
 
-            # step action
-            obs, reward, done, info = self.env.step(action)
-            self.env.render()
-            
-            # sleep
-            time.sleep(self.agent_refresh)
+            while not done:
+                # select action
+                action = self.predict(obs, deterministic=True)[0]
 
-            # update stats
-            ep_cum_reward += reward
-            steps += 1
+                # step action
+                obs, reward, done, info = self.env.step(action)
+                self.env.render()
+                
+                # sleep
+                time.sleep(self.agent_refresh)
 
-            # log stats
-            self.logger.add_scalar('Output/theta', info['theta'], i)
-            self.logger.add_scalar('Output/omega', info['omega'], i)
-            self.logger.add_scalar('Output/reward', reward, i)
-            self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
-            self.logger.add_scalar('Input/action', action, i)
+                # update stats
+                ep_cum_reward += reward
+                steps += 1
 
-            # terminal state
-            print(obs, reward, done)
-            if done:
-                # log episodic stats
-                self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-                self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
+                # log stats
+                self.logger.add_scalar('Output/theta', info['theta'], steps)
+                self.logger.add_scalar('Output/omega', info['omega'], steps)
+                self.logger.add_scalar('Output/reward', reward, steps)
+                self.logger.add_scalar('Input/target_dev', info['target_dev'], steps)
+                self.logger.add_scalar('Input/action', action, steps)
 
-                # reset stats
-                ep_cum_reward / steps
-                ep_cum_reward = 0
+            # log episodic stats
+            self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+            self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
-                ep += 1
-                steps = 0
+            # reset stats
+            ep_cum_reward / steps
+            ep_cum_reward = 0
 
-                # reset environment
-                self.env.reset()
+            steps = 0
+
+            # reset environment
+            self.env.reset()

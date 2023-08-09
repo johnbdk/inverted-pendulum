@@ -118,10 +118,6 @@ class RLManager():
                                   tensorboard_log=MODELS_DIR,
                                   verbose=1,
                                   device='cpu', # much faster than GPU
-                                #   policy_kwargs= dict(activation_fn=nn.ReLU,
-                                #                       net_arch=dict(
-                                #                         pi=[32, 32], 
-                                #                         vf=[32, 32]))
             )
         else:
             raise ValueError('Unknown method %s' % method)
@@ -149,7 +145,7 @@ class RLManager():
     def simulate(self):
         print('Starting simulation')
         try:
-            self.model.simulate(total_timesteps=self.total_timesteps)
+            self.model.simulate()
         except KeyboardInterrupt:
             print("Keyboard interruption.")
         finally:

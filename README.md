@@ -35,13 +35,32 @@ python main.py gp --sparse --inducing 10 --train
 
 ## Reinforcement learning
 
+Train RL with q learning:
 ```bash
-python src/main.py rl --train --agent dqn --env unbalanced_disk
-
-python src/main.py rl --train --agent a2c_built
-python src/main.py rl --train --agent a2c_built --multi_target
-
-python src/main.py rl --test --agent a2c_built --load A2C_1 --render
-
+python src/main.py rl --train
 ```
 
+Train RL with DQN:
+```bash
+python src/main.py rl --train --agent dqn
+```
+
+Train RL with A2C (single target):
+```bash
+python src/main.py rl --train --agent a2c_built
+```
+
+To specify the multi_target task, add the following flag:
+```bash
+    --multi_target
+```
+
+To render, add the following flag:
+```bash
+    --render
+```
+
+To load a specific trained RL agent (for example, session A2C_built_Best_0) and run inference:
+```bash
+python src/main.py rl --test --agent a2c_built --load A2C_built_Best_0 --render
+```

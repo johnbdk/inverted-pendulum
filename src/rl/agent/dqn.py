@@ -166,14 +166,14 @@ class DQN(BaseAgent):
                 for i, neurons in enumerate(self.hidden_layers):
                     self.logger.add_scalar('Parameters/hidden_layer_' + str(i), neurons, s)
 
-                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
-                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
-                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
-                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
-                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
-                self.logger.add_scalar('Practical/max_swing', temp_max_swing, ep)
+                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, s)
+                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, s)
+                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, s)
+                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, s)
+                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, s)
+                self.logger.add_scalar('Practical/max_swing', temp_max_swing, s)
 
-                self.logger.add_scalar('DQN/loss', temp_ep_loss, ep)
+                self.logger.add_scalar('DQN/loss', temp_ep_loss, s)
 
                 # print statistics
                 print('\n---- Episode %d Completed ----' % (ep))
@@ -199,7 +199,7 @@ class DQN(BaseAgent):
 
                 # save model every few episodes
                 if ep % SAVE_FREQ == 0:
-                    self.save()
+                    self.save(path=self.get_logdir())
 
             else:
                 obs = next_obs
@@ -209,8 +209,8 @@ class DQN(BaseAgent):
                 self.target_network.load_state_dict(self.q_network.state_dict())
 
         # force save model at the end
-        self.save()
-        
+        self.save(path=self.get_logdir())      
+
         # close summary writer
         self.logger.close()
 

@@ -180,7 +180,7 @@ ax5.set_xlabel('Omega')
 ax5.set_ylabel('Action')
 ax5.set_zlabel('Reward')
 
-# Plot Total Reward as a 3D Surface plot (omega-action, theta=0, target=pi+pi/18)
+# Plot Total Reward as a 3D Surface plot (omega-action, theta=pi, target=pi+pi/18)
 omega_mesh, action_mesh = np.meshgrid(omega_mesh, action_range)
 data = REWARD_MULTI(theta_fixed_top, omega_mesh, action_mesh, target_fixed_right)
 ax6 = fig.add_subplot(236, projection='3d')

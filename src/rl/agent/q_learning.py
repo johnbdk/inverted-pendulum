@@ -117,16 +117,16 @@ class QLearning(BaseAgent):
                 self.logger.add_scalar('Parameters/gamma', self.gamma, s)
                 self.logger.add_scalar('Parameters/nvec', info['nvec'], s)
 
-                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, ep)
-                self.logger.add_scalar('Practical/max_swing', temp_max_swing, ep)
-                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, ep)
-                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, ep)
-                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, ep)
-                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, ep)
+                self.logger.add_scalar('Practical/ep_length', self.env_time._elapsed_steps, s)
+                self.logger.add_scalar('Practical/max_swing', temp_max_swing, s)
+                self.logger.add_scalar('Practical/cum_reward', temp_ep_reward, s)
+                self.logger.add_scalar('Practical/cum_norm_reward', temp_ep_reward/self.env_time._elapsed_steps, s)
+                self.logger.add_scalar('Practical/cum_theta_error', temp_ep_theta_error, s)
+                self.logger.add_scalar('Practical/max_complete_steps', temp_ep_max_complete_steps, s)
                 
-                self.logger.add_scalar('Q-table/new_q_pairs', temp_ep_qpairs, ep)
-                self.logger.add_scalar('Q-table/Max_q', temp_ep_max_q, ep)
-                self.logger.add_scalar('Q-table/cum_updates', temp_ep_q_change, ep)
+                self.logger.add_scalar('Q-table/new_q_pairs', temp_ep_qpairs, s)
+                self.logger.add_scalar('Q-table/Max_q', temp_ep_max_q, s)
+                self.logger.add_scalar('Q-table/cum_updates', temp_ep_q_change, s)
 
                 # print info
                 print('steps: %d/%d (%.2f%%)' % (s, total_timesteps, (100*s)/total_timesteps))
@@ -150,7 +150,7 @@ class QLearning(BaseAgent):
                 temp_ep_max_complete_steps = 0
 
                 # save q-table
-                self.save()
+                self.save(path=self.get_logdir())
 
                 # reset environment
                 obs = self.env.reset()
@@ -161,8 +161,8 @@ class QLearning(BaseAgent):
                 temp_ep_q_change += self.alpha*A
                 obs = obs_new
 
-            self.save()
-
+            self.save(path=self.get_logdir())
+            
         return self.Qmat
     
     def predict(self, obs, deterministic=False):

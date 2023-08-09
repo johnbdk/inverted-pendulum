@@ -10,7 +10,7 @@ from gym.wrappers.time_limit import TimeLimit
 
 # local imports
 from config.definitions import MODELS_DIR
-from config.env import DISK_ACTIONS
+from config.rl import TEST_EPISODES
 
 class BaseAgent(object):
     def __init__(self, 
@@ -59,7 +59,7 @@ class BaseAgent(object):
         pass
 
     # method for testing (override in extended classes if necessary)
-    def simulate(self, total_timesteps : int):
+    def simulate(self):
         # initialize environment
         obs = self.env.reset()
 
@@ -67,8 +67,9 @@ class BaseAgent(object):
         ep = 0
         steps = 0
         ep_cum_reward = 0
+        done = False
         
-        for i in range(total_timesteps):
+        while not done:
             # select action
             action = self.predict(obs, deterministic=True)
 
@@ -84,24 +85,22 @@ class BaseAgent(object):
             steps += 1
 
             # log stats
-            self.logger.add_scalar('Output/theta', info['theta'], i)
-            self.logger.add_scalar('Output/omega', info['omega'], i)
-            self.logger.add_scalar('Output/reward', reward, i)
-            self.logger.add_scalar('Input/target_dev', info['target_dev'], i)
-            self.logger.add_scalar('Input/action', action, i)
+            self.logger.add_scalar('Output/theta', info['theta'], steps)
+            self.logger.add_scalar('Output/omega', info['omega'], steps)
+            self.logger.add_scalar('Output/reward', reward, steps)
+            self.logger.add_scalar('Input/target_dev', info['target_dev'], steps)
+            self.logger.add_scalar('Input/action', action, steps)
 
-            # terminal state
-            if done:
-                # log stats
-                self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
-                self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
+        # log stats
+        self.logger.add_scalar('Validation/cum_reward', ep_cum_reward, ep)
+        self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
-                # reset stats
-                ep_cum_reward / steps
-                ep_cum_reward = 0
+        # reset stats
+        ep_cum_reward / steps
+        ep_cum_reward = 0
 
-                ep += 1
-                steps = 0
+        ep += 1
+        steps = 0
 
-                # reset environment
-                self.env.reset()
+        # reset environment
+        self.env.reset()
