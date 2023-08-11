@@ -50,15 +50,15 @@ class GaussianProcess:
         y_pred, y_std = self.gp.predict(X, return_std=True)
         return y_pred[:, None], y_std[:, None]
 
-    def plot(self, X : np.ndarray, Y : np.ndarray, Y_pred : np.ndarray, sigma : np.ndarray) -> None:
+    def plot(self, X : np.ndarray, Y : np.ndarray, Y_est : np.ndarray, var : np.ndarray) -> None:
         """
         Plot the original data, predictions, and confidence intervals.
 
         Parameters:
         X (numpy.ndarray): Input variables.
-        y (numpy.ndarray): Original output variables.
-        y_pred (numpy.ndarray): Predicted output variables.
-        sigma (numpy.ndarray): Standard deviations of the predictions.
+        Y (numpy.ndarray): Original output variables.
+        Y_est (numpy.ndarray): Predicted output variables.
+        var (numpy.ndarray): Standard deviations of the predictions.
         """
 
         time = np.arange(0, X.shape[0])
@@ -77,7 +77,7 @@ class GaussianProcess:
         # Plot prediction and error
         plt.subplot(3, 1, 2)
         plt.plot(time, Y, label='Output Angle th (GT)')
-        plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
+        plt.errorbar(time, Y_est, yerr=2*var, fmt='.r')
         plt.xlabel('time')
         plt.ylabel('Output angle (th)')
         plt.title('GP Prediction with error')
@@ -86,7 +86,7 @@ class GaussianProcess:
 
         # Plot error
         plt.subplot(3, 1, 3)
-        plt.plot(time, Y-Y_pred, label='Output angle error')
+        plt.plot(time, Y-Y_est, label='Output angle error')
         plt.xlabel('time')
         plt.ylabel('Estimation error (th)')
         plt.title('GP Estimation Error')
@@ -125,7 +125,7 @@ class SparseGaussianProcess:
         sim = repr.simulate(X, f=self.predict)
         return sim['mean'][self.io_max :], sim['var'][self.io_max :]
 
-    def plot(self, X : np.ndarray, Y : np.ndarray, Y_pred : np.ndarray, sigma : np.ndarray):
+    def plot(self, X : np.ndarray, Y : np.ndarray, Y_est : np.ndarray, var : np.ndarray):
 
         time = np.arange(X.shape[0])
 
@@ -142,16 +142,16 @@ class SparseGaussianProcess:
 
         plt.subplot(3, 1, 2)
         plt.plot(time, Y)
-        plt.plot(time, Y_pred)
-        # plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
-        # plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
+        plt.plot(time, Y_est)
+        # plt.errorbar(time, Y_est, yerr=2*var, fmt='.r')
+        # plt.errorbar(time, Y_est, yerr=2*var, fmt='.r')
         plt.title('Prediction with error bar')
         plt.grid()
 
         # Plot error
         plt.subplot(3, 1, 3)
         plt.plot(time, Y, label='Ground truth angle error')
-        plt.plot(time, Y-Y_pred, label='Residuals angle error')
+        plt.plot(time, Y-Y_est, label='Residuals angle error')
         # plt.xlabel('time')
         plt.ylabel('Estimation error (th)')
         plt.title('Sparse GP Estimation Error')

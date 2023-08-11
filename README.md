@@ -15,15 +15,14 @@ To test Sparse GP with architecture narx:
 python main.py gp --test --sparse --nb [number_of_past_inputs] --na [number_of_past_outputs] --fname [filename] --sim
 ```
 
-The argument fname already indicates with how many inputs/outputs (i.e. na/nb) the GP was trained. Use this info to pass the --na and --nb arguments when typing the above command.
+The argument --fname already indicates how many inputs/outputs (i.e. nb/na) the GP used to be trained. Use this info to pass the --nb and --na arguments when typing the above command.
 
-The argument --sim is a boolean flag and indicates whether to do a simulation or prediction. If this argument is specified, the program does simulation, otherwise prediction.
+The argument --sim is a boolean flag indicating whether to do a simulation or prediction. If this argument is specified, the program does simulation, otherwise prediction.
 
 NOTE: There is no need to add --inducing argument since the saved model already possesses this information.
 
 To train/test GP (i.e. not sparse GP), just emit the --sparse argument from the above commands.
 
-```
 ## Reinforcement Learning
 
 Train RL with q learning (by default / you can omit the --agent flag):

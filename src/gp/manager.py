@@ -87,8 +87,8 @@ class GPManager:
         print("Start training...")
         # train GP model
         X, Y = self.data_narx["train"]
-        self.pendulum_gp.fit(X, Y)
-        self.save_model(self.pendulum_gp.gp)
+        self.pendulum_gp.fit(X=X, Y=Y)
+        self.save_model(model=self.pendulum_gp.gp)
         
     def test(self, fname : str = '', sim : bool = True):
         # load GP model
@@ -107,7 +107,7 @@ class GPManager:
             print("Y_pred shape: {}".format(Y_est.shape))
             print("var_pred shape: {}".format(var.shape))
         # plot data
-        self.pendulum_gp.plot(X[self.io_max :], Y[self.io_max :], Y_est, var)
+        self.pendulum_gp.plot(X=X[self.io_max :], Y=Y[self.io_max :], Y_pred=Y_est, sigma=var)
     
     def grid_search(self):
         pass
@@ -132,6 +132,7 @@ class GPManager:
             self.pendulum_gp.kernel = self.pendulum_gp.gp.kern
             self.pendulum_gp.io_max = self.io_max
             self.pendulum_gp.Z = self.pendulum_gp.gp.Z
+            self.num_inducing = self.pendulum_gp.gp.num_inducing
             print("Loading GP kernel : {}".format(self.pendulum_gp.kernel))
             print("Loading GP {} inducing points Z".format(self.pendulum_gp.gp.num_inducing))
 
