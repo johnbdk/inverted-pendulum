@@ -209,7 +209,7 @@ class A2CBuilt(BaseAgent):
         """
 
         self.model.set_parameters(
-            load_path_or_dict=os.path.join(MODELS_DIR, path + '.zip')
+            load_path_or_dict = os.path.join(MODELS_DIR, path + '.zip')
         )
 
     def simulate(self):

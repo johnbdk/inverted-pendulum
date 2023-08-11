@@ -1,5 +1,7 @@
 # External libraries
+import torch
 import numpy as np
+from typing import Callable
 from matplotlib import pyplot as plt
 
 # scikit-learn
@@ -96,16 +98,20 @@ class GaussianProcess:
 
 class SparseGaussianProcess:
     """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
-    def __init__(self, X : np.ndarray, Y : np.ndarray, Z : np.ndarray, io_max : int) -> None:
-
+    def __init__(self, X : np.ndarray, Y : np.ndarray, num_inducing : int, num_inputs : int, num_outputs : int) -> None:
+        
+        self.io_max = max(num_inputs, num_outputs)
         # define kernel
-        self.kernel = GPy.kern.RBF(input_dim=io_max, lengthscale=1.0, variance=1.0)
+        self.kernel = GPy.kern.RBF(input_dim=num_inputs+num_outputs, lengthscale=1.0, variance=1.0)
+        
+        min_x, max_x = np.min(X), np.max(X)
+        inducing_points = np.random.uniform(low=min_x, high=max_x, size=(num_inducing, num_inputs + num_outputs))
 
         # define regressor
         if Y.ndim == 1:
             Y = Y[:, None]
-        self.gp = GPy.models.SparseGPRegression(X, Y, kernel=self.kernel, Z=Z)
-
+        self.gp = GPy.models.SparseGPRegression(X, Y, kernel=self.kernel, Z=inducing_points)
+        self.Z = self.gp.Z
         print('%s initialized with kernel:%s' % (__class__.__name__, self.kernel))
 
     def fit(self, X : np.ndarray, Y : np.ndarray) -> None:
@@ -113,7 +119,12 @@ class SparseGaussianProcess:
 
     def predict(self, X : np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return self.gp.predict(X)
-        
+    
+    def simulate(self, X : np.ndarray, repr) -> tuple[np.ndarray, np.ndarray]:
+        # sim = repr.simulate(X_test[:, 0], f=self.pendulum_gp.predict)
+        sim = repr.simulate(X, f=self.predict)
+        return sim['mean'][self.io_max :], sim['var'][self.io_max :]
+
     def plot(self, X : np.ndarray, Y : np.ndarray, Y_pred : np.ndarray, sigma : np.ndarray):
 
         time = np.arange(X.shape[0])
@@ -123,7 +134,7 @@ class SparseGaussianProcess:
         plt.subplot(3, 1, 1)
         plt.plot(time, X, label='Input Voltage u (GT)')
         plt.plot(time, Y, label='Output Angle th (GT)')
-        plt.xlabel('time')
+        # plt.xlabel('time')
         plt.ylabel('Input Voltage (u)')
         plt.title('Original Pendulum Data')
         plt.legend()
@@ -131,7 +142,9 @@ class SparseGaussianProcess:
 
         plt.subplot(3, 1, 2)
         plt.plot(time, Y)
-        plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
+        plt.plot(time, Y_pred)
+        # plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
+        # plt.errorbar(time, Y_pred, yerr=2*sigma, fmt='.r')
         plt.title('Prediction with error bar')
         plt.grid()
 
@@ -139,7 +152,7 @@ class SparseGaussianProcess:
         plt.subplot(3, 1, 3)
         plt.plot(time, Y, label='Ground truth angle error')
         plt.plot(time, Y-Y_pred, label='Residuals angle error')
-        plt.xlabel('time')
+        # plt.xlabel('time')
         plt.ylabel('Estimation error (th)')
         plt.title('Sparse GP Estimation Error')
         plt.legend()

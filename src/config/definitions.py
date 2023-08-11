@@ -12,6 +12,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(defin
 DATASET_DIR = os.path.join(ROOT_DIR, "data")
 SRC_DIR = os.path.join(ROOT_DIR, "src")
 MODELS_DIR = os.path.join(ROOT_DIR, "models")
+GP_MODELS_DIR = os.path.join(MODELS_DIR, "GPs")
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 BATCH_SIZE = 100

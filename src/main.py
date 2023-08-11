@@ -41,7 +41,10 @@ parser_gp = subparsers.add_parser("gp", parents=[parent_parser],
 parser_gp.add_argument('--nb', type=int, default=3, help='Number of past inputs of NARX')
 parser_gp.add_argument('--na', type=int, default=3, help='Number of past outputs of NARX')
 parser_gp.add_argument('--sparse', action='store_true', default=False, help="Method to be used (Sparse or Full Gaussian process)")
-parser_gp.add_argument('--inducing', type=int, default=0, help='Number of inducing points (used in sparse Gaussian process)')
+parser_gp.add_argument('--inducing', type=int, default=1, help='Number of inducing points (used in sparse Gaussian process)')
+parser_gp.add_argument('--samples', type=int, default=-1, help='Number of samples to be used. Default -1 (this means full training data)')
+parser_gp.add_argument('--fname', type=str, required=False, help='Name of model to load')
+parser_gp.add_argument('--sim', action='store_true', default=False, required=False, help="whether or not to do simulation or prediction")
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
@@ -63,13 +66,12 @@ def __main__():
         gpm = GPManager(num_inputs=args.nb,
                         num_outputs=args.na,
                         sparse=args.sparse,
-                        num_inducing_points=args.inducing)
+                        num_inducing=args.inducing,
+                        num_samples=args.samples)
         if args.train:
-            # gpm.train()
-            pass
+            gpm.train()
         elif args.test:
-            # gpm.test()
-            pass
+            gpm.test(fname=args.fname, sim=args.sim)
 
     # 2. SYSTEM IDENTIFICATION : Artificial Neural Network Task
     elif args.method == 'ann':
