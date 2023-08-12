@@ -45,6 +45,11 @@ parser_gp.add_argument('--inducing', type=int, default=1, help='Number of induci
 parser_gp.add_argument('--samples', type=int, default=-1, help='Number of samples to be used. Default -1 (this means full training data)')
 parser_gp.add_argument('--fname', type=str, required=False, help='Name of model to load')
 parser_gp.add_argument('--sim', action='store_true', default=False, required=False, help="whether or not to do simulation or prediction")
+parser_gp.add_argument('--grid_search', action='store_true', default=False, required=False, help="do a grid search for hyperparameters optimization")
+parser_gp.add_argument('--load_grid_search', action='store_true', default=False, required=False, help="do a grid search for hyperparameters optimization")
+parser_gp.add_argument('--pred_submission', action='store_true', default=False, required=False, help="do a prediction submission")
+parser_gp.add_argument('--sim_submission', action='store_true', default=False, required=False, help="do a prediction submission")
+
 
 parser_rl = subparsers.add_parser("rl", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
@@ -71,7 +76,15 @@ def __main__():
         if args.train:
             gpm.train()
         elif args.test:
-            gpm.test(fname=args.fname, sim=args.sim)
+            gpm.test(fname=args.fname, load=True, sim=args.sim)
+        elif args.grid_search:
+            gpm.grid_search()
+        elif args.load_grid_search:
+            gpm.load_grid_search_dict()
+        elif args.pred_submission:
+            gpm.test_prediction_submission(fname=args.fname)
+        elif args.sim_submission:
+            gpm.test_simulation_submission(fname=args.fname)
 
     # 2. SYSTEM IDENTIFICATION : Artificial Neural Network Task
     elif args.method == 'ann':

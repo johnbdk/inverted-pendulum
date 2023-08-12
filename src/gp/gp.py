@@ -100,13 +100,14 @@ class SparseGaussianProcess:
     """This class represents a Sparse Gaussian Process (SGP) model for a Pendulum system."""
     def __init__(self, X : np.ndarray, Y : np.ndarray, num_inducing : int, num_inputs : int, num_outputs : int) -> None:
         
+        self.num_inputs = num_inputs
+        self.num_outputs = num_outputs
         self.io_max = max(num_inputs, num_outputs)
         # define kernel
         self.kernel = GPy.kern.RBF(input_dim=num_inputs+num_outputs, lengthscale=1.0, variance=1.0)
         
         min_x, max_x = np.min(X), np.max(X)
         inducing_points = np.random.uniform(low=min_x, high=max_x, size=(num_inducing, num_inputs + num_outputs))
-
         # define regressor
         if Y.ndim == 1:
             Y = Y[:, None]
@@ -125,36 +126,57 @@ class SparseGaussianProcess:
         sim = repr.simulate(X, f=self.predict)
         return sim['mean'][self.io_max :], sim['var'][self.io_max :]
 
-    def plot(self, X : np.ndarray, Y : np.ndarray, Y_est : np.ndarray, var : np.ndarray):
+    def plot(self, X : np.ndarray, Y : np.ndarray, Y_est : np.ndarray, var : np.ndarray, sim : bool):
 
         time = np.arange(X.shape[0])
 
-        # Plot original data
-        plt.figure()
-        plt.subplot(3, 1, 1)
-        plt.plot(time, X, label='Input Voltage u (GT)')
-        plt.plot(time, Y, label='Output Angle th (GT)')
-        # plt.xlabel('time')
-        plt.ylabel('Input Voltage (u)')
-        plt.title('Original Pendulum Data')
-        plt.legend()
-        plt.grid()
+        print('Stats:')
+        rms_rad = np.mean((Y_est-Y)**2)**0.5
+        rms_deg = rms_rad/(2*np.pi)*360
+        nrms = rms_rad/Y.std()*100
+        print('RMS:', rms_rad,'radians')
+        print('RMS:', rms_deg,'degrees')
+        print('NRMS:', nrms,'%')
 
-        plt.subplot(3, 1, 2)
-        plt.plot(time, Y)
+        # Plot original data
+        # plt.figure()
+        # plt.subplot(3, 1, 1)
+        # plt.plot(time, X, label='Input Voltage u (GT)')
+        # plt.plot(time, Y, label='Output Angle th (GT)')
+        # # plt.xlabel('time')
+        # plt.ylabel('Input Voltage (u)')
+        # plt.title('Original Pendulum Data')
+        # plt.legend()
+        # plt.grid()
+        # time = time[0:800]
+        # Y = Y[0:800]
+        # Y_est = Y_est[0:800]
+        # var = var[0:800]
+
+        plt.subplot(2, 1, 1)
+        plt.plot(time, Y, label='Ground truth angle')
         plt.plot(time, Y_est)
         # plt.errorbar(time, Y_est, yerr=2*var, fmt='.r')
-        # plt.errorbar(time, Y_est, yerr=2*var, fmt='.r')
-        plt.title('Prediction with error bar')
+        plt.errorbar(time, Y_est, yerr=2*var, fmt='.r', label='Estimated angle')
+        if sim:
+            plt.title('Sparse GP Simulation with Error bar')
+        else:
+            plt.title('Sparse GP Prediction with Error bar')
+        plt.xlabel('time')
+        plt.ylabel('Theta angle')
         plt.grid()
 
         # Plot error
-        plt.subplot(3, 1, 3)
-        plt.plot(time, Y, label='Ground truth angle error')
+        plt.subplot(2, 1, 2)
+        plt.plot(time, Y, label='Ground truth angle')
         plt.plot(time, Y-Y_est, label='Residuals angle error')
-        # plt.xlabel('time')
-        plt.ylabel('Estimation error (th)')
-        plt.title('Sparse GP Estimation Error')
+        plt.xlabel('time')
+        plt.ylabel('Theta angle')
+        if sim:
+            plt.title('Sparse GP Simulation Error')
+        else:
+            plt.title('Sparse GP Prediction Error')
+        
         plt.legend()
         plt.grid()
 

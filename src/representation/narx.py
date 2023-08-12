@@ -20,6 +20,7 @@ class NARX:
         y_list_var = []
 
         results = {}
+
         for unow in u.tolist():
             # Compute the current y given by f
             uy_concat = np.concatenate((upast, ypast))[None, :]

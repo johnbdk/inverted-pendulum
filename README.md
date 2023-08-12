@@ -5,14 +5,14 @@ This project is about implemented a reinforcement learning approach in combinati
 
 To train Sparse GP with architecture narx:
 ```bash
-python main.py gp --train --sparse --nb [number_of_past_inputs] --na [number_of_past_outputs] --inducing [num_inducing_points] --sample [num_samples]
+python main.py gp --train --sparse --nb ['num_of_past_inputs'] --na ['num_of_past_outputs'] --inducing ['num_inducing_points'] --sample [num_samples]
 ```
 
 If --sample argument is left empty then GP uses the whole dataset, otherwise num_samples indicates how many samples from the dataset to be used for training/validating/testing.
 
 To test Sparse GP with architecture narx:
 ```bash
-python main.py gp --test --sparse --nb [number_of_past_inputs] --na [number_of_past_outputs] --fname [filename] --sim
+python main.py gp --test --sparse --nb ['num_of_past_inputs'] --na ['num_of_past_outputs'] --fname ['filename'] --sim
 ```
 
 The argument --fname already indicates how many inputs/outputs (i.e. nb/na) the GP used to be trained. Use this info to pass the --nb and --na arguments when typing the above command.
