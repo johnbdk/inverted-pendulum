@@ -532,15 +532,12 @@ def simulation_noe():
     with torch.no_grad():
         for u, th in eval_dataloader:
             th = th[:,1:]
-            # u = u - u_mean / u_std
-            # th = th - th_mean / th_std
             eval_out.append(th.detach().numpy())  # Convert eval_out to a PyTorch tensor
             out = model(u)
             eval_pred.append(out.detach().numpy())
-            print(np.shape(eval_out))
-            print(np.shape(eval_pred))
         eval_out = np.squeeze(eval_out)
         eval_pred = np.squeeze(eval_pred)
+        th_test_sim = eval_pred[:,-1]
         u_test = u[:,0].detach().numpy()
 
     np.savez('test-simulation-example-submission-file.npz', th=th_test_sim, u=u_test)
