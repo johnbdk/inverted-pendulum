@@ -5,7 +5,7 @@ import argparse
 
 # Local Relative Imports
 from config.definitions import *
-from ann.model import train_narx, train_noe, eval_ann, grid_search
+from ann.model import train_narx, train_noe, eval_noe, eval_narx, simulation_narx, prediction_narx, prediction_noe, simulation_noe, train_narx_grid, eval_grid
 from rl.manager import RLManager
 from gp.manager import GPManager
 from config.rl import TRAIN_STEPS, TEST_STEPS
@@ -33,6 +33,10 @@ parser = argparse.ArgumentParser(parents=[parent_parser])
 subparsers = parser.add_subparsers(title="actions", dest="method")
 parser_ann = subparsers.add_parser("ann", parents=[parent_parser],
                                       description='The method parser', help='Method to be chosen (ANN or GP or RL)')
+parser_ann.add_argument('--grid_search', action='store_true', default=False, required=False, help="do a grid search for hyperparameters optimization")
+parser_ann.add_argument('--grid_eval', action='store_true', default=False, required=False, help="do a grid evaluation for hyperparameters optimization")
+parser_ann.add_argument('--pred_submission', action='store_true', default=False, required=False, help="do a prediction submission")
+parser_ann.add_argument('--sim_submission', action='store_true', default=False, required=False, help="do a prediction submission")
 # parser_ann.add_argument('--model-arch', type=str, choices=['narx', 'noe', 'ss'], default='narx',
 #                            required=False, help='Choose model architecture')
 
@@ -90,18 +94,39 @@ def __main__():
     elif args.method == 'ann':
         if args.train:
             if args.model_arch == 'narx':
-                train_narx(2,2,32)
-            elif args.model_arch == 'narx_grid':
-                train_narx(2,2,32)
-                grid_search()
+                train_narx(2, 2, 32)
             elif args.model_arch == 'noe': 
                 train_noe()
             print("Training of the model has been completed")
         elif args.test:
-            if eval_ann(args.mode_path, args.model_arch):
-                print("Evaluation of the model has been completed")
+            if args.model_arch == 'narx':
+                eval_narx(2, 2)
+                print("Evaluation of the NARX model has been completed")
+            elif args.model_arch == 'noe':
+                eval_noe()
+                print("Evaluation of the NOE model has been completed")
             else:
                 print("Model file does not exists")
+        elif args.grid_search:
+            train_narx_grid()
+        elif args.pred_submission:
+            if args.model_arch == 'narx':
+                prediction_narx()
+                print("Narx prediction submission done")
+            elif args.model_arch == 'noe':
+                prediction_noe()
+                print("Noe prediction submission done")
+        elif args.sim_submission:
+            if args.model_arch == 'narx':
+                simulation_narx()
+                print("Narx simulation submission done")
+            elif args.model_arch == 'noe':
+                simulation_noe()
+                print("Noe simulation submission done")
+        elif args.grid_eval:
+            eval_grid()
+
+
 
     # 3. POLICY LEARNING : Reinforcement Learning
     elif args.method == 'rl':

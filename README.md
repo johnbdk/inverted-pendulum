@@ -62,19 +62,26 @@ Eg. to train ANN with architecture noe:
 python .\main.py ann --train --model-arch noe
 ```
 
-Eg. to test ANN with architecture noe and a specific model:
+Eg. to test ANN with architecture noe best model:
 ```bash
-python .\main.py ann --test --model-arch noe --model-file state_space.pth 
+python .\main.py ann --test --model-arch noe 
+```
+Eg. to run the prediction submission for ann narx:
+```bash
+python .\main.py ann --pred_submission --model-arch narx
 ```
 
-Eg. to train ANN with architecture narx and display detailed processing information on your screen with the flag verbose:
+Eg. to run the prediction submission for ann narx:
 ```bash
-python .\main.py ann --train --model-arch narx --verbose
+python .\main.py ann --sim_submission --model-arch narx
 ```
 
-Eg. to RE-train ANN with architecture narx and display detailed processing information on your screen with the flag verbose:
+Eg. to run the grid search for ann narx:
 ```bash
-python .\main.py ann --train --model-arch narx --model-path narx.pth --verbose
+python .\main.py ann --grid_search
 ```
 
-As you can see, on the last example we also specified the model name. This is because the model, first, needs to be loaded so as to save its current state and continue its training.
+Eg. to run the grid search evalution for ann narx:
+```bash
+python .\main.py ann --grid_eval
+```
