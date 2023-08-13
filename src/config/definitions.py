@@ -14,7 +14,7 @@ SRC_DIR = os.path.join(ROOT_DIR, "src")
 MODELS_DIR = os.path.join(ROOT_DIR, "models")
 GP_MODELS_DIR = os.path.join(MODELS_DIR, "GPs")
 LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-GRID_DIR = os.path.join(ROOT_DIR, "grid_search_ann")
+GRID_DIR = os.path.join(ROOT_DIR, "models/grid_search_ann")
 
 BATCH_SIZE = 100
 # series length
