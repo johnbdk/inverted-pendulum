@@ -384,16 +384,12 @@ def eval_noe():
     eval_error = []
     for u, th in eval_dataloader:
         th = th[:,1:]
-        print(np.shape(u))
         eval_out.append(th.detach().numpy())  # Convert eval_out to a PyTorch tensor
         out = model(u)
-        print(np.shape(out))
         eval_pred.append(out.detach().numpy())
-        print(np.shape(eval_out))
-        print(np.shape(eval_pred))
     eval_out = np.squeeze(eval_out)
     eval_pred = np.squeeze(eval_pred)
-    eval_error = eval_out[:,-1] - eval_pred[:,-1]
+    
     # Figure with comparison to ground truth
     plt.figure(1)
     plt.subplot(2,1,1)
@@ -404,6 +400,7 @@ def eval_noe():
    
     # eval_pred = np.reshape(eval_pred, (len(eval_pred), 1))
     eval_pred = eval_pred*0.4904721616946861+0.034056081732066625
+    eval_error = eval_out[:,-1] - eval_pred[:,-1]
     plt.plot(eval_pred[:,-1][0:length])
     plt.plot(eval_out[:,-1][0:length],'--')
     # plt.errorbar(time, eval_pred[0:length], yerr=2*var, fmt='.r', label='Estimated angle')
@@ -411,7 +408,7 @@ def eval_noe():
     plt.xlabel('time')
     plt.ylabel('Theta angle')
     plt.legend(["Actual", "Predicted"])
-    plt.title("ANN NARX prediction")
+    plt.title("ANN NOE prediction")
     plt.grid()
 
     
@@ -429,33 +426,6 @@ def eval_noe():
     plt.grid()
     plt.show()
 
-    # Figure with comparison to ground truth
-    plt.figure(2)
-    plt.subplot(2,1,1)
-    length = 800
-    time = np.arange(length)
-    eval_out = np.reshape(eval_out, [len(eval_out), 1])
-   
-    eval_pred = np.reshape(eval_pred, (len(eval_pred), 1))
-    plt.plot(eval_pred[0:length])
-    plt.plot(eval_out[0:length],'--')
-    plt.xlabel('time')
-    plt.ylabel('Theta angle')
-    plt.legend(["Actual", "Predicted"])
-    plt.title("ANN NARX prediction")
-    plt.grid()
-
-
-    # Figure with error
-    plt.subplot(2,1,2)
-    eval_error = np.reshape(eval_error, (len(eval_error), 1))
-    plt.plot(eval_out[0:length])
-    plt.plot(eval_error[0:length])
-    plt.xlabel('time')
-    plt.ylabel('Theta angle')
-    plt.legend(["Ground truth angle", "Residual angle error"])
-    plt.title("Prediction error")
-    plt.grid()
     
 def simulation_narx():
     # Create path for checkpoint file
