@@ -289,9 +289,6 @@ class DQN(BaseAgent):
         else:  
             with torch.no_grad():
                 state_tensor = torch.tensor([obs], device=self.device, dtype=torch.float32)
-                # print("1,val {}, shape: {}".format(self.q_network(state_tensor), self.q_network(state_tensor).shape))
-                # print("3,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1], self.q_network(state_tensor).max(1)[1].shape))
-                # print("4,val {}, shape: {}".format(self.q_network(state_tensor).max(1)[1].view(1, 1), self.q_network(state_tensor).max(1)[1].view(1, 1).shape))
                 action = self.q_network(state_tensor).max(1)[1].view(1, 1).item()
         return action
 

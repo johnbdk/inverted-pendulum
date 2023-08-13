@@ -52,8 +52,6 @@ class CustomUnbalancedDiskSingle(UnbalancedDisk):
         theta = obs[0]
         omega = obs[1]
 
-        # print(obs[0], theta)
-
         # calculate done
         target_error = TARGET_ERROR_SINGLE(theta)
         if target_error <= DESIRED_TARGET_ERROR:
@@ -117,8 +115,6 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
 
         # calculate done
         target_error = TARGET_ERROR_MULTI(theta, target)
-        # if TARGET_ERROR_MULTI(theta, target) <= DESIRED_TARGET_ERROR:
-        # _target_error_multi = np.pi - np.abs(np.pi - np.abs(theta - target))
         if target_error <= DESIRED_TARGET_ERROR:
             self.complete_steps += 1
         else:
@@ -130,10 +126,6 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
                               omega=omega,
                               action=action,
                               target=target)
-        # reward_multi_theta = 1.0 * np.cos(_target_error_multi)
-        # reward_multi_omega =  -0.025 * np.abs(omega) * np.cos(_target_error_multi)
-        # reward_multi_action = -(1/6) * np.abs(action)
-        # reward = reward_multi_theta + reward_multi_omega + reward_multi_action
 
         # append info stats
         info['theta'] = theta
@@ -143,6 +135,9 @@ class CustomUnbalancedDiskMulti(UnbalancedDisk):
         info['target_dev'] = target_dev
 
         return obs, reward, done, info
+    
+    def change_target(self, target_angle):
+        self.active_target = target_angle
     
     def get_obs(self):
         obs = super().get_obs()

@@ -43,7 +43,7 @@ DQN_PARAMS = {
     'gamma' : 0.99,
     'buffer_size' : 50_000,
     'batch_size' : 64,
-    'hidden_layers' : [20, 20],
+    'hidden_layers' : [64],
     'target_update_freq' : 10_000,
 }
 

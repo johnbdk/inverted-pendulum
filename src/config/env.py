@@ -5,7 +5,7 @@ import numpy as np
 import math
 
 # number of discritized states in the environment
-NVEC = 9
+NVEC = 18
 
 # Discrete Action Space (used for mappings)
 DISK_ACTIONS = [-3, -1, 0, +1, +3]

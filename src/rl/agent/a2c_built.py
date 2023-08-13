@@ -12,6 +12,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from rl.agent.base_agent import BaseAgent
 from config.definitions import MODELS_DIR
 from config.rl import TEST_EPISODES
+from config.env import MULTI_TARGET_ANGLES
 
 class CustomCallback(BaseCallback):
     """
@@ -230,7 +231,9 @@ class A2CBuilt(BaseAgent):
         ep_cum_reward = 0
         done = False
 
-        for ep in range(TEST_EPISODES):
+        target_to_target = False
+
+        for ep in range(len(MULTI_TARGET_ANGLES)):
 
             while not done:
                 # select action
@@ -259,10 +262,13 @@ class A2CBuilt(BaseAgent):
             self.logger.add_scalar('Validation/ep_length', self.env_time._elapsed_steps, ep)
 
             # reset stats
-            ep_cum_reward / steps
             ep_cum_reward = 0
 
-            steps = 0
-
             # reset environment
-            self.env.reset()
+            if not target_to_target:
+                self.env.reset()
+            done = False
+
+            # change target
+            target = MULTI_TARGET_ANGLES[ep]
+            self.env.change_target(target)

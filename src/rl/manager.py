@@ -78,7 +78,7 @@ class RLManager():
 
         # discretize if necessary
         if not multi_target and STATE_SPACE_MAP[method] == 'discrete':
-            print('Starting discretization')
+            print('Wrapping environment with discretization layer')
             self.env = Discretizer(self.env, nvec=NVEC)
         
         # ---------------- model ----------------
